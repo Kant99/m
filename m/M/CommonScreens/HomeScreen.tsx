@@ -133,7 +133,7 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             <TouchableOpacity>
               <Text style={styles.footerLink}>Terms & Conditions</Text>
             </TouchableOpacity>
-            <Text style={styles.footerText}> and </Text>
+            <Text style={styles.footerText}> And </Text>
             <TouchableOpacity>
               <Text style={styles.footerLink}>Privacy Policy</Text>
             </TouchableOpacity>
