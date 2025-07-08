@@ -1,3 +1,5 @@
+import apiConnector from "../../utils/apiConnector";
+
 export const summaryCards = [
   { key: 'all', label: 'All Products', value: 4, desc: 'Active Products', color: '#3973F4', icon: '🛒' },
   { key: 'out', label: 'Out of Stock', value: 4, desc: 'Need Restock', color: '#FF7B1A', icon: '⚠️' },

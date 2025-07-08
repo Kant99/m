@@ -11,7 +11,9 @@ import ExpiringPriceModal from './home/ExpiringPriceModal';
 import ExpiredPriceModal from './home/ExpiredPriceModal';
 import SearchProductsModal from './home/SearchProductsModal';
 import AddNewProductModal from './home/AddNewProductModal';
-import { summaryCards, products } from './home/data';
+import { summaryCards } from './home/data';
+import apiConnector from '../utils/apiConnector';
+import { useEffect } from 'react';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +33,7 @@ const WholesalerHomeScreen = ({ navigation }) => {
     gstCategory: 'Exempted',
     quantityPricing: 'Applicable',
   });
+
 
   const toggleState = (key, value) => setState((prev) => ({ ...prev, [key]: value }));
 
@@ -92,9 +95,17 @@ const WholesalerHomeScreen = ({ navigation }) => {
           />
         </View>
         <View style={styles.productsContainer}>
-          {products.map((prod, idx) => (
-            <ProductCard key={idx} product={prod} onEdit={handleEdit} />
-          ))}
+          {loading ? (
+            <Text>Loading products...</Text>
+          ) : error ? (
+            <Text>{error}</Text>
+          ) : productList.length === 0 ? (
+            <Text>No products found.</Text>
+          ) : (
+            productList.map((prod, idx) => (
+              <ProductCard key={prod._id || idx} product={prod} onEdit={handleEdit} />
+            ))
+          )}
         </View>
       </ScrollView>
       <EditProductModal

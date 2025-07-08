@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, Alert } from 'react-native';
+import apiConnector from '../../utils/apiConnector';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const AddNewProductModal = ({ visible, onClose }) => {
   const [productName, setProductName] = useState('');
@@ -7,13 +9,44 @@ const AddNewProductModal = ({ visible, onClose }) => {
   const [stock, setStock] = useState('');
   const [gstCategory, setGstCategory] = useState('Exempted');
   const [quantityPricing, setQuantityPricing] = useState('Applicable');
+  const [categoryName, setCategoryName] = useState('');
+  const [productImage, setProductImage] = useState(null);
+  const [gstPercent, setGstPercent] = useState('');
 
   if (!visible) return null;
 
-  const handleAddProduct = () => {
-    // Implement API call to add product here
-    console.log('Adding product:', { productName, price, stock, gstCategory, quantityPricing });
-    onClose();
+  const handleImagePick = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
+    if (!result.didCancel && result.assets && result.assets.length > 0) {
+      setProductImage({
+        uri: result.assets[0].uri,
+        name: result.assets[0].fileName || 'product.jpg',
+        type: result.assets[0].type || 'image/jpeg',
+      });
+    }
+  };
+
+  const handleAddProduct = async () => {
+    const productData = {
+      productName,
+      priceUnit: "per kg",
+      priceBeforeGst: price,
+      stock,
+      gstCategory: gstCategory.toLowerCase(),
+      categoryName,
+      gstPercent: gstCategory === 'Exempted' ? 0 : Number(gstPercent),
+    };
+    try {
+      const response = await apiConnector.createProduct(productData, productImage);
+      console.log('Product added:', response);
+      onClose();
+    } catch (error) {
+      console.error('Error adding product:', error.message);
+      if (error.message && error.message.includes('KYC must be completed to create a product')) {
+        Alert.alert('KYC Required', 'Complete your KYC first');
+        onClose();
+      }
+    }
   };
 
   return (
@@ -29,10 +62,19 @@ const AddNewProductModal = ({ visible, onClose }) => {
           </View>
           <ScrollView style={styles.content}>
             <View style={styles.imageUploadContainer}>
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imageIcon}>📷</Text>
-                <Text style={styles.imageText}>Upload Image</Text>
-              </View>
+              <TouchableOpacity style={styles.imagePlaceholder} onPress={handleImagePick}>
+                {productImage ? (
+                  <>
+                    <Text style={styles.imageIcon}>✔️</Text>
+                    <Text style={styles.imageText}>{productImage.name}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.imageIcon}>📷</Text>
+                    <Text style={styles.imageText}>Upload Image</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Product Name</Text>
@@ -96,11 +138,24 @@ const AddNewProductModal = ({ visible, onClose }) => {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <TextInput
-                style={styles.input}
-                value={gstCategory === 'Exempted' ? '0% GST' : '5% GST'}
-                editable={false}
-              />
+              {gstCategory === 'Exempted' ? (
+                <TextInput
+                  style={styles.input}
+                  value={'0'}
+                  editable={false}
+                  placeholder="GST Percent"
+                  placeholderTextColor="#999"
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={gstPercent}
+                  onChangeText={setGstPercent}
+                  keyboardType="numeric"
+                  placeholder="GST Percent"
+                  placeholderTextColor="#999"
+                />
+              )}
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Price After GST</Text>
@@ -153,6 +208,16 @@ const AddNewProductModal = ({ visible, onClose }) => {
                   </View>
                 </View>
               )}
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Category Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter category name"
+                placeholderTextColor="#999"
+                value={categoryName}
+                onChangeText={setCategoryName}
+              />
             </View>
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
