@@ -20,6 +20,8 @@ export type AppScreen = 'Splash' | 'Home' | 'WholesalerHome' | 'OrderScreen' | '
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('Splash');
+  const [wholesalerData, setWholesalerData] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Show splash screen for 1 second, then navigate to home screen
@@ -30,8 +32,13 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const navigateToScreen = (screen: AppScreen) => {
+  // Accepts optional data and token
+  const navigateToScreen = (screen: AppScreen, data?: any) => {
     setCurrentScreen(screen);
+    if (screen === 'WholesalerHome' && data) {
+      setWholesalerData(data);
+      if (data.token) setToken(data.token);
+    }
   };
 
   const renderScreen = () => {
@@ -41,7 +48,7 @@ function App() {
       case 'Home':
         return <HomeScreen onNavigate={navigateToScreen} />;
       case 'WholesalerHome':
-        return <WholesalerHomeScreen onNavigate={navigateToScreen} />;
+        return <WholesalerHomeScreen onNavigate={navigateToScreen} wholesalerData={wholesalerData} token={token} />;
       case 'OrderScreen':
         return <OrderScreen onNavigate={navigateToScreen} />;
       case 'AccountScreen':

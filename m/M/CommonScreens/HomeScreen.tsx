@@ -11,8 +11,10 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import type { AppScreen } from '../App';
+import axios from 'axios';
 
 type Props = {
   onNavigate: (screen: AppScreen) => void;
@@ -24,18 +26,97 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
   const [selectedUserType, setSelectedUserType] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleUserTypeSelect = (type: string) => {
     setSelectedUserType(type);
   };
 
-  const handleContinue = () => {
-    if (selectedUserType === 'wholesaler') {
-      onNavigate('WholesalerHome');
+  const handleContinue = async () => {
+    setError(null);
+    setLoading(true);
+    const baseUrl = 'http://192.168.1.9:4000';
+    const otpUrl = `${baseUrl}/api/otp`;
+    const loginUrl = `${baseUrl}/api/auth/login`;
+    const signupUrl = `${baseUrl}/api/wholesaler/auth/signup`;
+    try {
+      let otp = '123456'; // fallback, but will be overwritten
+      if (selectedUserType === 'wholesaler') {
+        try {
+          console.log('Requesting OTP for:', phoneNumber);
+          const otpResponse = await axios.post(otpUrl, { phoneNumber });
+          otp = otpResponse.data.data.otp; // <-- get OTP from response
+          console.log('OTP received:', otp);
+        } catch (otpError: any) {
+          setError(otpError.response?.data?.message || 'Failed to send OTP');
+          setLoading(false);
+          return;
+        }
+      }
+//  Login Step 1
+      console.log('Logging in with:', phoneNumber, otp);
+      try {
+        const loginResponse = await axios.post(loginUrl, {
+          phoneNumber,
+          otp,
+        });
+        console.log('Login response:', loginResponse.data);
+        const { user, shopProfile, token } = loginResponse.data.data;
+        console.log('[Login] Success:', { user, shopProfile, token });
+      } catch (loginError: any) {
+        console.log('Login error:', loginError.response?.data || loginError.message);
+        // If user not found, try signup
+        const res = loginError.response;
+        if (res && res.status === 404 && res.data && res.data.message && res.data.message.toLowerCase().includes('user not found')) {
+          try {
+            await axios.post(signupUrl, {
+              phoneNumber,
+              otp,
+            });
+            // After signup, try login again
+            try {
+              const loginResponse = await axios.post(loginUrl, {
+                phoneNumber,
+                otp,
+              });
+              const { user, shopProfile, token } = loginResponse.data.data;
+              // Save user/token as needed
+              onNavigate('WholesalerHome');
+              setLoading(false);
+              return;
+            } catch (loginError2: any) {
+              setError(loginError2.response?.data?.message || 'Login failed after signup');
+              setLoading(false);
+              return;
+            }
+          } catch (signupError: any) {
+            setError(signupError.response?.data?.message || 'Signup failed');
+            setLoading(false);
+            return;
+          }
+        } else if (res && res.status === 400 && res.data && res.data.message && res.data.message.toLowerCase().includes('otp not found')) {
+          setError('Please request an OTP first.');
+          setLoading(false);
+          return;
+        } else {
+          setError(
+            (res && (typeof res.data === 'string' ? res.data : JSON.stringify(res.data))) ||
+            'Login failed'
+          );
+        }
+      }
+      setLoading(false);
+      if (selectedUserType === 'wholesaler') {
+        onNavigate('WholesalerHome');
+      }
+      // Add navigation for retailer if needed
+      console.log('Selected type:', selectedUserType);
+      console.log('Phone number:', phoneNumber);
+    } catch (e) {
+      setError('An unexpected error occurred.');
+      setLoading(false);
     }
-    // Add navigation for retailer if needed
-    console.log('Selected type:', selectedUserType);
-    console.log('Phone number:', phoneNumber);
   };
 
   return (
@@ -118,13 +199,18 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
         <TouchableOpacity
           style={[
             styles.continueButton,
-            (!selectedUserType || phoneNumber.length < 10) && styles.disabledButton
+            (!selectedUserType || phoneNumber.length < 10 || loading) && styles.disabledButton
           ]}
           onPress={handleContinue}
-          disabled={!selectedUserType || phoneNumber.length < 10}
+          disabled={!selectedUserType || phoneNumber.length < 10 || loading}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          {loading ? (
+            <ActivityIndicator color="#1F3E58" />
+          ) : (
+            <Text style={styles.continueButtonText}>Continue</Text>
+          )}
         </TouchableOpacity>
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -133,7 +219,7 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             <TouchableOpacity>
               <Text style={styles.footerLink}>Terms & Conditions</Text>
             </TouchableOpacity>
-            <Text style={styles.footerText}> And </Text>
+            <Text style={styles.footerText}> and </Text>
             <TouchableOpacity>
               <Text style={styles.footerLink}>Privacy Policy</Text>
             </TouchableOpacity>
@@ -374,6 +460,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#555',
     lineHeight: 22,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+    fontSize: 14,
   },
 });
 

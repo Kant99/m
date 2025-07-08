@@ -16,6 +16,8 @@ import type { AppScreen } from '../App';
 
 type Props = {
   onNavigate: (screen: AppScreen) => void;
+  wholesalerData?: any;
+  token?: string | null;
 };
 
 const summaryCards = [
@@ -99,7 +101,7 @@ const highPriceProducts = [
   },
 ];
 
-const WholesalerHomeScreen: React.FC<Props> = ({ onNavigate }) => {
+const WholesalerHomeScreen: React.FC<Props> = ({ onNavigate, wholesalerData, token }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('catalogue');
@@ -117,6 +119,15 @@ const WholesalerHomeScreen: React.FC<Props> = ({ onNavigate }) => {
 
   return (
     <View style={styles.container}>
+      {/* Render wholesaler data for demonstration */}
+      {wholesalerData && (
+        <View style={{padding: 16, backgroundColor: '#FFF8E1', margin: 10, borderRadius: 8}}>
+          <Text style={{fontWeight: 'bold'}}>Welcome, {wholesalerData.user?.name || 'Wholesaler'}!</Text>
+          <Text>Phone: {wholesalerData.user?.phoneNumber}</Text>
+          <Text>Shop: {wholesalerData.shopProfile?.shopName || 'N/A'}</Text>
+          <Text numberOfLines={1} ellipsizeMode="middle">Token: {token}</Text>
+        </View>
+      )}
       {/* Dropdown Overlay */}
       {addProductDropdownVisible && (
         <Pressable 
