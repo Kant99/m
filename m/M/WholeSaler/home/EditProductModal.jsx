@@ -1,31 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, Image, StyleSheet } from 'react-native';
 
-type Product = {
-  name: string;
-  price: number;
-  stock: number;
-  img: any;
-  tags: string[];
-};
-
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-  selectedProduct: Product | null;
-  gstCategory: string;
-  setGstCategory: (value: string) => void;
-  quantityPricing: string;
-  setQuantityPricing: (value: string) => void;
-};
-
-const EditProductModal: React.FC<Props> = ({
+const EditProductModal = ({
   visible,
   onClose,
   selectedProduct,
-  gstCategory,
+  gstCategory = 'Exempted',
   setGstCategory,
-  quantityPricing,
+  quantityPricing = 'Applicable',
   setQuantityPricing,
 }) => {
   const [productName, setProductName] = useState('');
@@ -37,13 +19,16 @@ const EditProductModal: React.FC<Props> = ({
       setProductName(selectedProduct.name || '');
       setPrice(selectedProduct.price ? selectedProduct.price.toString() : '');
       setStock(selectedProduct.stock ? selectedProduct.stock.toString() : '');
+    } else {
+      setProductName('');
+      setPrice('');
+      setStock('');
     }
   }, [selectedProduct]);
 
   if (!visible) return null;
 
   const handleSaveChanges = () => {
-    // Implement API call to update product here
     console.log('Saving product:', { productName, price, stock, gstCategory, quantityPricing });
     onClose();
   };
@@ -74,7 +59,7 @@ const EditProductModal: React.FC<Props> = ({
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Product Name</Text>
-                <Text style={styles.idText}>ID: 1</Text>
+                <Text style={styles.idText}>ID: {selectedProduct?.id || 1}</Text>
               </View>
               <TextInput
                 style={styles.input}

@@ -13,109 +13,68 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import type { AppScreen } from '../App';
-import axios from 'axios';
-
-type Props = {
-  onNavigate: (screen: AppScreen, data?: any) => void;
-};
+import apiConnector from '../utils/apiConnector'; // Import the apiConnector utility
 
 const { width } = Dimensions.get('window');
 
-const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
-  const [selectedUserType, setSelectedUserType] = useState<string | null>(null);
+const HomeScreen = ({ navigation }) => {
+  const [selectedUserType, setSelectedUserType] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  const handleUserTypeSelect = (type: string) => {
+  // Set baseUrl for apiConnector (use environment variable if available)
+  apiConnector.baseUrl = process.env.REACT_NATIVE_API_BASE_URL || 'http://192.168.1.9:4000';
+
+  const handleUserTypeSelect = (type) => {
     setSelectedUserType(type);
   };
 
   const handleContinue = async () => {
     setError(null);
     setLoading(true);
-    const baseUrl = 'http://192.168.1.9:4000';
-    const otpUrl = `${baseUrl}/api/otp`;
-    const loginUrl = `${baseUrl}/api/auth/login`;
-    const signupUrl = `${baseUrl}/api/wholesaler/auth/signup`;
+
     try {
-      let otp = '123456'; // fallback, but will be overwritten
+      let otp = '123456'; // Fallback OTP
       if (selectedUserType === 'wholesaler') {
         try {
-          console.log('Requesting OTP for:', phoneNumber);
-          const otpResponse = await axios.post(otpUrl, { phoneNumber });
-          otp = otpResponse.data.data.otp; // <-- get OTP from response
-          console.log('OTP received:', otp);
-        } catch (otpError: any) {
-          setError(otpError.response?.data?.message || 'Failed to send OTP');
+          const otpResponse = await apiConnector.sendPhoneOTP(phoneNumber);
+          otp = otpResponse.data.otp; // Adjust based on actual API response structure
+        } catch (otpError) {
+          setError(otpError.message || 'Failed to send OTP');
           setLoading(false);
           return;
         }
       }
-//  Login Step 1
-      console.log('Logging in with:', phoneNumber, otp);
       try {
-        const loginResponse = await axios.post(loginUrl, {
-          phoneNumber,
-          otp,
-        });
-        console.log('Login response:', loginResponse.data);
-        const { user, shopProfile, token } = loginResponse.data.data;
-        console.log('[Login] Success:', { user, shopProfile, token });
-        onNavigate('WholesalerHome', { user, token });
+        const loginResponse = await apiConnector.login(phoneNumber, otp);
+        const { user, token } = loginResponse.data; // Adjust based on actual response structure
+        apiConnector.setToken(token); // Store token for future requests
+        navigation.navigate('WholesalerHome', { user, token });
         setLoading(false);
-        return;
-      } catch (loginError: any) {
-        console.log('Login error:', loginError.response?.data || loginError.message);
-        // If user not found, try signup
-        const res = loginError.response;
-        if (
-          res &&
-          res.status === 404 &&
-          res.data &&
-          res.data.message &&
-          res.data.message.toLowerCase().includes('user not found')
-        ) {
-          // User does not exist, so signup
+      } catch (loginError) {
+        if (loginError.message?.toLowerCase().includes('user not found')) {
           try {
-            const signupResponse = await axios.post(signupUrl, {
+            const signupResponse = await apiConnector.wholesalerSignup({
               phoneNumber,
               otp,
             });
-            // Extract wholesaler/user and token from response
-            const data = signupResponse.data.data;
-            const user = data.wholesaler;
-            const token = data.token;
-            console.log(data)
-            console.log('Signup success:', { user, token });
-            // Save user/token as needed (e.g., in state, context, or storage)
-            onNavigate('WholesalerHome', { user, token });
+            const { wholesaler: user, token } = signupResponse.data;
+            console.log(signupResponse) // Adjust based on response
+            apiConnector.setToken(token); // Store token
+            navigation.navigate('WholesalerHome', { user, token });
             setLoading(false);
-            return;
-          } catch (signupError: any) {
-            setError(signupError.response?.data?.message || 'Signup failed');
+          } catch (signupError) {
+            setError(signupError.message || 'Signup failed');
             setLoading(false);
-            return;
           }
-        } else if (
-          res &&
-          res.status === 400 &&
-          res.data &&
-          res.data.message &&
-          res.data.message.toLowerCase().includes('otp not found')
-        ) {
+        } else if (loginError.message?.toLowerCase().includes('otp not found')) {
           setError('Please request an OTP first.');
           setLoading(false);
-          return;
         } else {
-          setError(
-            (res && (typeof res.data === 'string' ? res.data : JSON.stringify(res.data))) ||
-              'Login failed'
-          );
+          setError(loginError.message || 'Login failed');
           setLoading(false);
-          return;
         }
       }
     } catch (e) {
@@ -127,8 +86,6 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-      
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Mandi Bhai</Text>
@@ -138,52 +95,29 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
         </View>
         <Text style={styles.headerSubtitle}>जो आपकी बढ़ावे आय, वही हैं मंडी भाई !</Text>
       </View>
-
-      {/* Yellow line separator */}
       <View style={styles.separator} />
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Main question */}
         <Text style={styles.questionText}>Let's get you started! Tell us who you are?</Text>
-
-        {/* User type selection cards (smaller) */}
         <TouchableOpacity
-          style={[
-            styles.userTypeCard,
-            selectedUserType === 'retailer' && styles.selectedCard
-          ]}
+          style={[styles.userTypeCard, selectedUserType === 'retailer' && styles.selectedCard]}
           onPress={() => handleUserTypeSelect('retailer')}
         >
-          <Image
-            source={require('../assets/Home1.png')}
-            style={styles.cardImageSmall}
-            resizeMode="contain"
-          />
+          <Image source={require('../assets/Home1.png')} style={styles.cardImageSmall} resizeMode="contain" />
           <View style={styles.cardContentSmall}>
             <Text style={styles.cardTitleSmall}>Retailer/Buyer</Text>
             <Text style={styles.cardSubtitleSmall}>I want to purchase products</Text>
           </View>
         </TouchableOpacity>
-
         <TouchableOpacity
-          style={[
-            styles.userTypeCard,
-            selectedUserType === 'wholesaler' && styles.selectedCard
-          ]}
+          style={[styles.userTypeCard, selectedUserType === 'wholesaler' && styles.selectedCard]}
           onPress={() => handleUserTypeSelect('wholesaler')}
         >
-          <Image
-            source={require('../assets/Home2.png')}
-            style={styles.cardImageSmall}
-            resizeMode="contain"
-          />
+          <Image source={require('../assets/Home2.png')} style={styles.cardImageSmall} resizeMode="contain" />
           <View style={styles.cardContentSmall}>
             <Text style={styles.cardTitleSmall}>Wholesaler/Supplier</Text>
             <Text style={styles.cardSubtitleSmall}>I want to sell products</Text>
           </View>
         </TouchableOpacity>
-
-        {/* Phone number input section (moved below cards) */}
         <Text style={styles.phoneLabel}>Enter your phone number</Text>
         <View style={styles.phoneInputContainer}>
           <View style={styles.countryCode}>
@@ -199,13 +133,8 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             maxLength={10}
           />
         </View>
-
-        {/* Continue button */}
         <TouchableOpacity
-          style={[
-            styles.continueButton,
-            (!selectedUserType || phoneNumber.length < 10 || loading) && styles.disabledButton
-          ]}
+          style={[styles.continueButton, (!selectedUserType || phoneNumber.length < 10 || loading) && styles.disabledButton]}
           onPress={handleContinue}
           disabled={!selectedUserType || phoneNumber.length < 10 || loading}
         >
@@ -216,8 +145,6 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
           )}
         </TouchableOpacity>
         {error && <Text style={styles.errorText}>{error}</Text>}
-
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>By continuing, you agree to our</Text>
           <View style={styles.footerLinks}>
@@ -231,14 +158,7 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Help Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -248,9 +168,9 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
               </Pressable>
             </View>
             <Text style={styles.modalText}>
-              <Text style={{fontWeight: 'bold'}}>Retailer/Buyer: </Text>
+              <Text style={{ fontWeight: 'bold' }}>Retailer/Buyer: </Text>
               Choose this if you want to purchase products for your store or personal use. You'll get access to wholesale prices and bulk buying options.{"\n\n"}
-              <Text style={{fontWeight: 'bold'}}>Wholesaler/Supplier: </Text>
+              <Text style={{ fontWeight: 'bold' }}>Wholesaler/Supplier: </Text>
               Choose this if you want to sell products in bulk to retailers. You'll be able to list your products and manage orders from retailers.
             </Text>
           </View>
@@ -325,10 +245,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFC107',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
@@ -405,7 +322,6 @@ const styles = StyleSheet.create({
     color: '#1F3E58',
   },
   footer: {
-  paddingTop:130,
     alignItems: 'center',
     paddingBottom: 30,
   },
@@ -475,4 +391,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-

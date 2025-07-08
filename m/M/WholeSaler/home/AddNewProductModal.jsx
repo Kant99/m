@@ -1,54 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, Image, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet } from 'react-native';
 
-type Product = {
-  name: string;
-  price: number;
-  stock: number;
-  img: any;
-  tags: string[];
-};
-
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-  selectedProduct: Product | null;
-  gstCategory: string;
-  setGstCategory: (value: string) => void;
-  quantityPricing: string;
-  setQuantityPricing: (value: string) => void;
-};
-
-const EditProductModal: React.FC<Props> = ({
-  visible,
-  onClose,
-  selectedProduct,
-  gstCategory,
-  setGstCategory,
-  quantityPricing,
-  setQuantityPricing,
-}) => {
+const AddNewProductModal = ({ visible, onClose }) => {
   const [productName, setProductName] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
-
-  useEffect(() => {
-    if (selectedProduct) {
-      setProductName(selectedProduct.name || '');
-      setPrice(selectedProduct.price ? selectedProduct.price.toString() : '');
-      setStock(selectedProduct.stock ? selectedProduct.stock.toString() : '');
-    }
-  }, [selectedProduct]);
+  const [gstCategory, setGstCategory] = useState('Exempted');
+  const [quantityPricing, setQuantityPricing] = useState('Applicable');
 
   if (!visible) return null;
 
-  const handleSaveChanges = () => {
-    // Implement API call to update product here
-    console.log('Saving product:', { productName, price, stock, gstCategory, quantityPricing });
+  const handleAddProduct = () => {
+    // Implement API call to add product here
+    console.log('Adding product:', { productName, price, stock, gstCategory, quantityPricing });
     onClose();
   };
-
-  const calculatedPrice = price ? parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1) : 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -58,30 +24,24 @@ const EditProductModal: React.FC<Props> = ({
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.backIcon}>←</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Edit Product</Text>
+            <Text style={styles.headerTitle}>Add New Product</Text>
             <View style={styles.headerSpacer} />
           </View>
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.imageContainer}>
+          <ScrollView style={styles.content}>
+            <View style={styles.imageUploadContainer}>
               <View style={styles.imagePlaceholder}>
-                {selectedProduct?.img ? (
-                  <Image source={selectedProduct.img} style={styles.productImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.imageIcon}>📷</Text>
-                )}
+                <Text style={styles.imageIcon}>📷</Text>
+                <Text style={styles.imageText}>Upload Image</Text>
               </View>
             </View>
             <View style={styles.inputContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Product Name</Text>
-                <Text style={styles.idText}>ID: 1</Text>
-              </View>
+              <Text style={styles.label}>Product Name</Text>
               <TextInput
                 style={styles.input}
-                value={productName}
-                onChangeText={setProductName}
                 placeholder="Enter product name"
                 placeholderTextColor="#999"
+                value={productName}
+                onChangeText={setProductName}
               />
             </View>
             <View style={styles.inputContainer}>
@@ -91,56 +51,50 @@ const EditProductModal: React.FC<Props> = ({
               </View>
               <TextInput
                 style={styles.input}
-                value={price}
-                onChangeText={setPrice}
                 placeholder="Enter price"
                 placeholderTextColor="#999"
+                value={price}
+                onChangeText={setPrice}
                 keyboardType="numeric"
               />
-              <Text style={styles.marketRate}>Current market rate: ₹45/kg</Text>
-              <Text style={styles.priceStatus}>
-                {parseFloat(price) <= 45 ? '📉 Your price is lowest' : '📈 Your price is higher'}
-              </Text>
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Stock Available</Text>
               <TextInput
                 style={styles.input}
+                placeholder="Enter available stock"
+                placeholderTextColor="#999"
                 value={stock}
                 onChangeText={setStock}
-                placeholder="Enter stock"
-                placeholderTextColor="#999"
                 keyboardType="numeric"
               />
               <Text style={styles.hintText}>Enter quantity in kg</Text>
             </View>
             <View style={styles.inputContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>GST Category</Text>
-                <View style={styles.buttonGroup}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      gstCategory === 'Exempted' && styles.selectedOption,
-                    ]}
-                    onPress={() => setGstCategory('Exempted')}
-                  >
-                    <Text style={[styles.optionText, gstCategory === 'Exempted' && styles.selectedOptionText]}>
-                      Exempted
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      gstCategory === 'Applicable' && styles.selectedOptionRed,
-                    ]}
-                    onPress={() => setGstCategory('Applicable')}
-                  >
-                    <Text style={[styles.optionText, gstCategory === 'Applicable' && styles.selectedOptionTextRed]}>
-                      Applicable
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              <Text style={styles.label}>GST Category</Text>
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    gstCategory === 'Exempted' && styles.selectedOption,
+                  ]}
+                  onPress={() => setGstCategory('Exempted')}
+                >
+                  <Text style={[styles.optionText, gstCategory === 'Exempted' && styles.selectedOptionText]}>
+                    Exempted
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    gstCategory === 'Applicable' && styles.selectedOption,
+                  ]}
+                  onPress={() => setGstCategory('Applicable')}
+                >
+                  <Text style={[styles.optionText, gstCategory === 'Applicable' && styles.selectedOptionText]}>
+                    Applicable
+                  </Text>
+                </TouchableOpacity>
               </View>
               <TextInput
                 style={styles.input}
@@ -150,36 +104,34 @@ const EditProductModal: React.FC<Props> = ({
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Price After GST</Text>
-              <Text style={styles.priceAfterGst}>₹{calculatedPrice.toFixed(2)}/kg</Text>
+              <Text style={styles.priceAfterGst}>₹{price ? (parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1)).toFixed(2) : '0.00'}/kg</Text>
               <Text style={styles.hintText}>Including {gstCategory === 'Applicable' ? '5%' : '0%'} GST</Text>
             </View>
             <View style={styles.inputContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Quantity Pricing</Text>
-                <View style={styles.buttonGroup}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      quantityPricing === 'Applicable' && styles.selectedOption,
-                    ]}
-                    onPress={() => setQuantityPricing('Applicable')}
-                  >
-                    <Text style={[styles.optionText, quantityPricing === 'Applicable' && styles.selectedOptionText]}>
-                      Applicable
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      quantityPricing === 'Not Applicable' && styles.selectedOptionGray,
-                    ]}
-                    onPress={() => setQuantityPricing('Not Applicable')}
-                  >
-                    <Text style={[styles.optionText, quantityPricing === 'Not Applicable' && styles.selectedOptionTextGray]}>
-                      Not Applicable
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              <Text style={styles.label}>Quantity Pricing</Text>
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    quantityPricing === 'Applicable' && styles.selectedOption,
+                  ]}
+                  onPress={() => setQuantityPricing('Applicable')}
+                >
+                  <Text style={[styles.optionText, quantityPricing === 'Applicable' && styles.selectedOptionText]}>
+                    Applicable
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    quantityPricing === 'Not Applicable' && styles.selectedOption,
+                  ]}
+                  onPress={() => setQuantityPricing('Not Applicable')}
+                >
+                  <Text style={[styles.optionText, quantityPricing === 'Not Applicable' && styles.selectedOptionText]}>
+                    Not Applicable
+                  </Text>
+                </TouchableOpacity>
               </View>
               {quantityPricing === 'Applicable' && (
                 <View style={styles.quantityTable}>
@@ -189,15 +141,15 @@ const EditProductModal: React.FC<Props> = ({
                   </View>
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>1 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{calculatedPrice.toFixed(2)}</Text>
+                    <Text style={styles.tableCell}>₹{price ? (parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1)).toFixed(2) : '0.00'}</Text>
                   </View>
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>5 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{(calculatedPrice - 2).toFixed(2)}</Text>
+                    <Text style={styles.tableCell}>₹{price ? (parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1) - 2).toFixed(2) : '0.00'}</Text>
                   </View>
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>10 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{(calculatedPrice - 5).toFixed(2)}</Text>
+                    <Text style={styles.tableCell}>₹{price ? (parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1) - 5).toFixed(2) : '0.00'}</Text>
                   </View>
                 </View>
               )}
@@ -206,8 +158,8 @@ const EditProductModal: React.FC<Props> = ({
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+              <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
+                <Text style={styles.addButtonText}>Add Product</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -226,7 +178,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxHeight: '85%',
+    maxHeight: '90%',
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 16,
@@ -258,34 +210,35 @@ const styles = StyleSheet.create({
     width: 24,
   },
   content: {
-    padding: 12,
+    padding: 16,
   },
-  imageContainer: {
+  imageUploadContainer: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   imagePlaceholder: {
-    width: 80,
-    height: 80,
+    width: 128,
+    height: 128,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
   },
-  productImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-  },
   imageIcon: {
-    fontSize: 24,
+    fontSize: 32,
     color: '#999',
+    marginBottom: 8,
+  },
+  imageText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
   },
   inputContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   labelRow: {
     flexDirection: 'row',
@@ -297,10 +250,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-  },
-  idText: {
-    fontSize: 14,
-    color: '#666',
   },
   unitText: {
     fontSize: 12,
@@ -315,16 +264,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     color: '#333',
   },
-  marketRate: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
-  priceStatus: {
-    fontSize: 14,
-    color: '#28A745',
-    marginTop: 4,
-  },
   hintText: {
     fontSize: 12,
     color: '#999',
@@ -332,6 +271,7 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: 'row',
+    marginVertical: 8,
   },
   optionButton: {
     paddingVertical: 8,
@@ -343,12 +283,6 @@ const styles = StyleSheet.create({
   selectedOption: {
     backgroundColor: '#D4EDDA',
   },
-  selectedOptionRed: {
-    backgroundColor: '#F8D7DA',
-  },
-  selectedOptionGray: {
-    backgroundColor: '#F5F5F5',
-  },
   optionText: {
     fontSize: 14,
     color: '#666',
@@ -356,14 +290,6 @@ const styles = StyleSheet.create({
   },
   selectedOptionText: {
     color: '#28A745',
-    fontWeight: 'bold',
-  },
-  selectedOptionTextRed: {
-    color: '#DC3545',
-    fontWeight: 'bold',
-  },
-  selectedOptionTextGray: {
-    color: '#999',
   },
   priceAfterGst: {
     fontSize: 20,
@@ -375,13 +301,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    marginTop: 8,
     overflow: 'hidden',
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F8F9FA',
-    padding: 8,
+    padding: 12,
   },
   tableHeaderText: {
     flex: 1,
@@ -392,9 +317,9 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
+    padding: 12,
   },
   tableCell: {
     flex: 1,
@@ -405,8 +330,8 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 24,
+    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
@@ -421,19 +346,19 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
   },
-  saveButton: {
+  addButton: {
     flex: 1,
-    backgroundColor: '#3973F4',
+    backgroundColor: '#4285F4',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     marginLeft: 8,
   },
-  saveButtonText: {
+  addButtonText: {
     fontSize: 16,
     color: '#FFF',
     fontWeight: '600',
   },
 });
 
-export default EditProductModal;
+export default AddNewProductModal;
