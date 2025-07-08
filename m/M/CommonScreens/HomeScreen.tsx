@@ -17,7 +17,7 @@ import type { AppScreen } from '../App';
 import axios from 'axios';
 
 type Props = {
-  onNavigate: (screen: AppScreen) => void;
+  onNavigate: (screen: AppScreen, data?: any) => void;
 };
 
 const { width } = Dimensions.get('window');
@@ -64,55 +64,60 @@ const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
         console.log('Login response:', loginResponse.data);
         const { user, shopProfile, token } = loginResponse.data.data;
         console.log('[Login] Success:', { user, shopProfile, token });
+        onNavigate('WholesalerHome', { user, token });
+        setLoading(false);
+        return;
       } catch (loginError: any) {
         console.log('Login error:', loginError.response?.data || loginError.message);
         // If user not found, try signup
         const res = loginError.response;
-        if (res && res.status === 404 && res.data && res.data.message && res.data.message.toLowerCase().includes('user not found')) {
+        if (
+          res &&
+          res.status === 404 &&
+          res.data &&
+          res.data.message &&
+          res.data.message.toLowerCase().includes('user not found')
+        ) {
+          // User does not exist, so signup
           try {
-            await axios.post(signupUrl, {
+            const signupResponse = await axios.post(signupUrl, {
               phoneNumber,
               otp,
             });
-            // After signup, try login again
-            try {
-              const loginResponse = await axios.post(loginUrl, {
-                phoneNumber,
-                otp,
-              });
-              const { user, shopProfile, token } = loginResponse.data.data;
-              // Save user/token as needed
-              onNavigate('WholesalerHome');
-              setLoading(false);
-              return;
-            } catch (loginError2: any) {
-              setError(loginError2.response?.data?.message || 'Login failed after signup');
-              setLoading(false);
-              return;
-            }
+            // Extract wholesaler/user and token from response
+            const data = signupResponse.data.data;
+            const user = data.wholesaler;
+            const token = data.token;
+            console.log(data)
+            console.log('Signup success:', { user, token });
+            // Save user/token as needed (e.g., in state, context, or storage)
+            onNavigate('WholesalerHome', { user, token });
+            setLoading(false);
+            return;
           } catch (signupError: any) {
             setError(signupError.response?.data?.message || 'Signup failed');
             setLoading(false);
             return;
           }
-        } else if (res && res.status === 400 && res.data && res.data.message && res.data.message.toLowerCase().includes('otp not found')) {
+        } else if (
+          res &&
+          res.status === 400 &&
+          res.data &&
+          res.data.message &&
+          res.data.message.toLowerCase().includes('otp not found')
+        ) {
           setError('Please request an OTP first.');
           setLoading(false);
           return;
         } else {
           setError(
             (res && (typeof res.data === 'string' ? res.data : JSON.stringify(res.data))) ||
-            'Login failed'
+              'Login failed'
           );
+          setLoading(false);
+          return;
         }
       }
-      setLoading(false);
-      if (selectedUserType === 'wholesaler') {
-        onNavigate('WholesalerHome');
-      }
-      // Add navigation for retailer if needed
-      console.log('Selected type:', selectedUserType);
-      console.log('Phone number:', phoneNumber);
     } catch (e) {
       setError('An unexpected error occurred.');
       setLoading(false);
