@@ -30,9 +30,9 @@ const App = () => (
       <Stack.Screen name="Orders" component={OrderScreen} />
       <Stack.Screen name="Account" component={AccountScreen} />
       <Stack.Screen name="Transactions" component={Transaction} />
-      {/* <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="Kyc" component={KycScreen1} /> */}
+      <Stack.Screen name="Kyc" component={KycScreen1} />
     </Stack.Navigator>
   </NavigationContainer>
 );

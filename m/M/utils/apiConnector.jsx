@@ -1,19 +1,47 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const apiConnector = {
-  baseUrl: "http://192.168.1.9:4000", // Default base URL from Postman collection
-  jwtToken: null, // Store JWT token for authenticated requests
+  baseUrl: "http://192.168.1.9:4000",
+  jwtToken: null,
 
-  // Set JWT token for authenticated requests
-  setToken(token) {
+  // Set JWT token for authenticated requests and store in AsyncStorage
+  async setToken(token) {
     this.jwtToken = token;
+    try {
+      await AsyncStorage.setItem('jwtToken', token);
+    } catch (error) {
+      console.error('Failed to save token to AsyncStorage:', error);
+    }
   },
 
-  // Common Routes
+  // Load token from AsyncStorage
+  async loadToken() {
+    try {
+      const token = await AsyncStorage.getItem('jwtToken');
+      if (token) {
+        this.jwtToken = token;
+      }
+    } catch (error) {
+      console.error('Failed to load token from AsyncStorage:', error);
+    }
+  },
+
+  // Clear token
+  async clearToken() {
+    this.jwtToken = null;
+    try {
+      await AsyncStorage.removeItem('jwtToken');
+    } catch (error) {
+      console.error('Failed to clear token from AsyncStorage:', error);
+    }
+  },
+
+  // --- rest of your methods remain unchanged ---
   async sendPhoneOTP(phoneNumber) {
     try {
       const response = await axios.post(`${this.baseUrl}/api/otp`, { phoneNumber });
-      console.log(response)
+      console.log(response);
       return response.data;
     } catch (error) {
       throw new Error(`Send OTP failed: ${error.response?.data?.message || error.message}`);
@@ -23,16 +51,15 @@ const apiConnector = {
   async login(phoneNumber, otp) {
     try {
       const response = await axios.post(`${this.baseUrl}/api/auth/login`, { phoneNumber, otp });
-      console.log(response)
+      console.log(response);
       if (response.data.token) {
-        this.setToken(response.data.token); // Store JWT token
+        await this.setToken(response.data.token); // Store JWT token in memory + AsyncStorage
       }
       return response.data;
     } catch (error) {
       throw new Error(`Login failed: ${error.response?.data?.message || error.message}`);
     }
   },
-
   // Wholesaler Routes
   async wholesalerSignup({ name, phoneNumber, email, otp }) {
     try {
@@ -105,12 +132,15 @@ const apiConnector = {
   },
 
   async getAllProducts() {
+    console.log('inside the getallproducts');
     try {
-      const response = await axios.get(`${this.baseUrl}/api/wholesaler/product`, {
+      const token = await AsyncStorage.getItem('jwtToken');
+      const response = await axios.get(`http://192.168.1.9:4000/api/wholesaler/product`, {
         headers: {
-          ...(this.jwtToken && { Authorization: `Bearer ${this.jwtToken}` }),
+          Authorization: `Bearer ${token}`,
         },
       });
+      console.log("response imside the getallproducts connector",response)
       return response.data;
     } catch (error) {
       throw new Error(`Get all products failed: ${error.response?.data?.message || error.message}`);

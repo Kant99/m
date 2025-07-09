@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Text, StyleSheet, Dimensions,TextInput, TouchableOpacity } from 'react-native';
-import Header from './home/Header';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ScrollView, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity } from 'react-native';
+ import Header from './home/Header';
 import SummaryCard from './home/SummaryCard';
 import ProductCard from './home/ProductCard';
 import AddProductButton from './home/AddProductButton';
@@ -11,7 +11,8 @@ import ExpiringPriceModal from './home/ExpiringPriceModal';
 import ExpiredPriceModal from './home/ExpiredPriceModal';
 import SearchProductsModal from './home/SearchProductsModal';
 import AddNewProductModal from './home/AddNewProductModal';
-import { summaryCards, products } from './home/data';
+import { summaryCards } from './home/data';
+import apiConnector from './../utils/apiConnector';
 
 const { width } = Dimensions.get('window');
 
@@ -30,9 +31,50 @@ const WholesalerHomeScreen = ({ navigation }) => {
     selectedProduct: null,
     gstCategory: 'Exempted',
     quantityPricing: 'Applicable',
+    products: [],
+    loading: false,
+    error: null,
   });
 
   const toggleState = (key, value) => setState((prev) => ({ ...prev, [key]: value }));
+
+  // Load JWT token from AsyncStorage
+  
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    console.log('inside the fetchProducts');
+    try {
+      toggleState('loading', true);
+      toggleState('error', null);
+
+     
+
+      const response = await apiConnector.getAllProducts();
+      console.log('response of all products:', response);
+
+      const mappedProducts = response.data.products.map((product) => ({
+        id: product._id,
+        name: product.productName,
+        stock: product.stock,
+        price: product.priceBeforeGst,
+        tags: product.tags || [],
+        img: product.productImage ,
+      }));
+      console.log('mappedProducts:', mappedProducts);
+      toggleState('products', mappedProducts);
+    } catch (error) {
+      console.error('Fetch products error:', error);
+      toggleState('error', error.message || 'Failed to fetch products');
+    } finally {
+      toggleState('loading', false);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log('inside the use effect');
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleCardPress = (key) => {
     if (key === 'kyc') {
@@ -87,9 +129,16 @@ const WholesalerHomeScreen = ({ navigation }) => {
           />
         </View>
         <View style={styles.productsContainer}>
-          {products.map((prod, idx) => (
-            <ProductCard key={idx} product={prod} onEdit={handleEdit} />
-          ))}
+          {state.loading && <Text style={styles.loadingText}>Loading products...</Text>}
+          {state.error && <Text style={styles.errorText}>{state.error}</Text>}
+          {!state.loading && !state.error && state.products.length === 0 && (
+            <Text style={styles.emptyText}>No products found</Text>
+          )}
+          {state.products
+            .filter((product) => product.name.toLowerCase().includes(state.search.toLowerCase()))
+            .map((prod) => (
+              <ProductCard key={prod.id} product={prod} onEdit={handleEdit} />
+            ))}
         </View>
       </ScrollView>
       <EditProductModal
@@ -189,6 +238,24 @@ const styles = StyleSheet.create({
   productsContainer: {
     marginTop: 8,
     paddingHorizontal: 8,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#D32F2F',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginVertical: 16,
   },
 });
 

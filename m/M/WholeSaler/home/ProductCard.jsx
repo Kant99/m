@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { products } from './data';
-
+import {getAllProducts} from './../../utils/apiConnector'
 const ProductCard = ({ product, onEdit }) => (
   <View style={styles.container}>
     <Image source={product.img} style={styles.image} resizeMode="cover" />
