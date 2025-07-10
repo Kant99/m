@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import  {createStackNavigator}  from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './CommonScreens/SplashScreen';
 import HomeScreen from './CommonScreens/HomeScreen';
 import WholesalerHomeScreen from './WholeSaler/WholesalerHomeScreen';
@@ -16,7 +16,7 @@ const Stack = createStackNavigator();
 const App = () => (
   <NavigationContainer>
     <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Splash">
+      {/* <Stack.Screen name="Splash">
         {({ navigation }) => (
           <SplashScreen
             onReady={() => {
@@ -24,7 +24,7 @@ const App = () => (
             }}
           />
         )}
-      </Stack.Screen>
+      </Stack.Screen> */}
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="WholesalerHome" component={WholesalerHomeScreen} />
       <Stack.Screen name="Orders" component={OrderScreen} />

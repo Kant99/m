@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,159 +11,217 @@ import {
   Modal,
   PanResponder,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import BottomTab from './BottomTab';
-import type { AppScreen } from '../App';
+import apiConnector from '../utils/apiConnector';
 
-type Props = {
-  onNavigate?: (screen: AppScreen) => void;
-};
-
-const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
+const OrderScreen = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('Orders');
   const [selectedOrderTab, setSelectedOrderTab] = useState('all');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [orderDetailsModalVisible, setOrderDetailsModalVisible] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('All');
   const [orderAmountRange, setOrderAmountRange] = useState(1000);
   const [vehicleNumber, setVehicleNumber] = useState('');
-  
-  // Slider configuration
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [initialSliderPosition, setInitialSliderPosition] = useState(0);
+
+  console.log('OrderScreen initialized', {
+    isOpen,
+    search,
+    activeTab,
+    selectedOrderTab,
+    filterModalVisible,
+    orderDetailsModalVisible,
+    selectedOrder,
+    selectedPaymentMethod,
+    orderAmountRange,
+    vehicleNumber,
+    orders: orders.length,
+    loading,
+    error,
+  });
+
   const minAmount = 1000;
   const maxAmount = 200000;
-  const sliderWidth = Dimensions.get('window').width * 0.8 - 48; // Modal width minus padding
-  const [initialSliderPosition, setInitialSliderPosition] = useState(0);
-  
-  // Calculate slider position based on amount
-  const getSliderPosition = (amount: number) => {
+  const sliderWidth = Dimensions.get('window').width * 0.8 - 48;
+
+  const getSliderPosition = (amount) => {
     const percentage = (amount - minAmount) / (maxAmount - minAmount);
-    return percentage * sliderWidth;
+    const position = percentage * sliderWidth;
+    console.log('getSliderPosition', { amount, percentage, position });
+    return position;
   };
-  
-  // Calculate amount based on slider position
-  const getAmountFromPosition = (position: number) => {
+
+  const getAmountFromPosition = (position) => {
     const percentage = Math.max(0, Math.min(1, position / sliderWidth));
-    return Math.round(minAmount + percentage * (maxAmount - minAmount));
+    const amount = Math.round(minAmount + percentage * (maxAmount - minAmount));
+    console.log('getAmountFromPosition', { position, percentage, amount });
+    return amount;
   };
-  
-  // Format amount with commas
-  const formatAmount = (amount: number) => {
-    return amount.toLocaleString('en-IN');
+
+  const formatAmount = (amount) => {
+    const formatted = amount.toLocaleString('en-IN');
+    console.log('formatAmount', { amount, formatted });
+    return formatted;
   };
-  
-  // PanResponder for slider
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (evt) => {
-      // Store initial position when gesture starts
+      console.log('PanResponder grant', { orderAmountRange });
       setInitialSliderPosition(getSliderPosition(orderAmountRange));
     },
     onPanResponderMove: (evt, gestureState) => {
       const newPosition = Math.max(0, Math.min(sliderWidth, initialSliderPosition + gestureState.dx));
       const newAmount = getAmountFromPosition(newPosition);
+      console.log('PanResponder move', { newPosition, newAmount, gestureState });
       setOrderAmountRange(newAmount);
     },
     onPanResponderRelease: () => {
-      // Optional: Add haptic feedback or animation here
+      console.log('PanResponder release', { orderAmountRange });
     },
   });
 
-  const orderTabs = [
-    { key: 'all', label: 'All (3)', count: 3 },
-    { key: 'new', label: 'New (1)', count: 1 },
-    { key: 'processing', label: 'Processing (1)', count: 1 },
-    { key: 'delivered', label: 'Delivered', count: 0 },
-  ];
+  useEffect(() => {
+    const fetchOrders = async () => {
+      console.log('fetchOrders started', { selectedOrderTab });
+      setLoading(true);
+      try {
+        let response;
+        if (selectedOrderTab === 'all') {
+          console.log('Calling getAllOrders');
+          response = await apiConnector.getAllOrders();
+        } else {
+          console.log('Calling searchOrders with status', { status: selectedOrderTab });
+          response = await apiConnector.searchOrders({ status: selectedOrderTab });
+        }
+        console.log('fetchOrders response', response);
+        setOrders(response.data?.orders || []);
+        setError(null);
+        setLoading(false);
+        console.log('fetchOrders completed', { loading: false, orders: response.data?.orders?.length || 0 });
+      } catch (err) {
+        console.log('fetchOrders error', err);
+        setError(err.message);
+        Alert.alert('Error', err.message);
+        setLoading(false);
+        console.log('fetchOrders completed', { loading: false, orders: orders.length });
+      }
+    };
+    fetchOrders();
+  }, [selectedOrderTab]);
 
-  const orders = [
-    {
-      id: 'ORD-2505-1234',
-      customerName: 'Rajesh Kumar',
-      phone: '+91 98765 43210',
-      date: 'May 3, 2025 • 10:23 AM',
-      items: 3,
-      amount: 235,
-      payment: 'Paid online',
-      status: 'Delivered',
-      statusColor: '#4CAF50',
-      statusBg: '#E8F5E8',
-      pincode: 'UP16 AB 1234',
-      otp: '4321',
-      avatar: require('../assets/to.png'),
-      vehicleType: 'Tata Ace Gold',
-      vehicleSubtype: 'Mini Truck',
-      orderItems: [
-        { name: 'Fresh Tomatoes', quantity: '2 kg', price: '₹40/kg', total: '₹80', image: require('../assets/to.png') },
-        { name: 'Potatoes', quantity: '3 kg', price: '₹30/kg', total: '₹90', image: require('../assets/IMG-4.png') },
-        { name: 'Onions', quantity: '2 kg', price: '₹32.50/kg', total: '₹65', image: require('../assets/oni.png') }
-      ],
-      subtotal: 235,
-      deliveryFee: 0,
-      total: 180,
-      deliveryStatus: 'Out for delivery',
-      paymentStatus: 'Completed'
-    },
-    {
-      id: 'ORD-2505-1233',
-      customerName: 'Priya Sharma',
-      phone: '+91 97654 32109',
-      date: 'May 3, 2025 • 09:45 AM',
-      items: 5,
-      amount: 450,
-      payment: 'Cash on delivery',
-      status: 'Processing',
-      statusColor: '#FF9800',
-      statusBg: '#FFF3E0',
-      pincode: 'UP16 AB 1234',
-      otp: '4321',
-      avatar: require('../assets/oni.png'),
-      vehicleType: 'Tata Ace Gold',
-      vehicleSubtype: 'Mini Truck',
-      orderItems: [
-        { name: 'Fresh Tomatoes', quantity: '3 kg', price: '₹40/kg', total: '₹120', image: require('../assets/to.png') },
-        { name: 'Onions', quantity: '5 kg', price: '₹32.50/kg', total: '₹162.50', image: require('../assets/oni.png') }
-      ],
-      subtotal: 282.50,
-      deliveryFee: 0,
-      total: 282.50,
-      deliveryStatus: 'Processing',
-      paymentStatus: 'Pending'
-    },
-    {
-      id: 'ORD-2505-1232',
-      customerName: 'Amit Patel',
-      phone: '+91 96543 21098',
-      date: 'May 3, 2025 • 08:30 AM',
-      items: 2,
-      amount: 180,
-      payment: 'Paid online',
-      status: 'New',
-      statusColor: '#2196F3',
-      statusBg: '#E3F2FD',
-      pincode: 'UP16 AB 1234',
-      otp: '4321',
-      avatar: require('../assets/cap.png'),
-      vehicleType: 'Tata Ace Gold',
-      vehicleSubtype: 'Mini Truck',
-      orderItems: [
-        { name: 'Fresh Tomatoes', quantity: '2 kg', price: '₹40/kg', total: '₹80', image: require('../assets/to.png') },
-        { name: 'Potatoes', quantity: '3 kg', price: '₹30/kg', total: '₹90', image: require('../assets/IMG-4.png') }
-      ],
-      subtotal: 170,
-      deliveryFee: 0,
-      total: 170,
-      deliveryStatus: 'Out for delivery',
-      paymentStatus: 'Completed'
-    },
+  const applyFilters = async () => {
+    console.log('applyFilters started', {
+      selectedOrderTab,
+      selectedPaymentMethod,
+      orderAmountRange,
+      vehicleNumber,
+    });
+    setLoading(true);
+    try {
+      const params = {
+        status: selectedOrderTab === 'all' ? undefined : selectedOrderTab,
+        paymentMethod: selectedPaymentMethod === 'All' ? undefined : selectedPaymentMethod.toLowerCase(),
+        minTotal: minAmount,
+        maxTotal: orderAmountRange,
+        vehicleNumber: vehicleNumber || undefined,
+      };
+      console.log('Calling searchOrders with params', params);
+      const response = await apiConnector.searchOrders(params);
+      console.log('applyFilters response', response);
+      setOrders(response.data?.orders || []);
+      setError(null);
+      setFilterModalVisible(false);
+      console.log('applyFilters completed', { orders: response.data?.orders?.length || 0 });
+    } catch (err) {
+      console.log('applyFilters error', err);
+      setError(err.message);
+      Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+      console.log('applyFilters finally', { loading: false });
+    }
+  };
+
+  const updateOrderStatus = async (orderId, status) => {
+    console.log('updateOrderStatus started', { orderId, status });
+    try {
+      const response = await apiConnector.updateOrderStatus(orderId, { status });
+      console.log('updateOrderStatus response', response);
+      Alert.alert('Success', 'Order status updated successfully');
+      const updatedOrders = orders.map((order) =>
+        order._id === orderId ? { ...order, status: response.data.order.status } : order
+      );
+      setOrders(updatedOrders);
+      setSelectedOrder({ ...selectedOrder, status: response.data.order.status });
+      console.log('updateOrderStatus updated states', {
+        updatedOrders: updatedOrders.length,
+        selectedOrderStatus: response.data.order.status,
+      });
+    } catch (err) {
+      console.log('updateOrderStatus error', err);
+      Alert.alert('Error', err.message);
+    }
+  };
+
+  const orderTabs = [
+    { key: 'all', label: `All (${orders.length})`, count: orders.length },
+    { key: 'pending', label: `New (${orders.filter((o) => o.status === 'pending').length})`, count: orders.filter((o) => o.status === 'pending').length },
+    { key: 'processing', label: `Processing (${orders.filter((o) => o.status === 'processing').length})`, count: orders.filter((o) => o.status === 'processing').length },
+    { key: 'delivered', label: `Delivered (${orders.filter((o) => o.status === 'delivered').length})`, count: orders.filter((o) => o.status === 'delivered').length },
   ];
+  console.log('orderTabs computed', orderTabs);
+
+  const getStatusStyles = (status) => {
+    const styles = (() => {
+      switch (status?.toLowerCase()) {
+        case 'delivered':
+          return { color: '#4CAF50', backgroundColor: '#E8F5E8' };
+        case 'processing':
+        case 'dispatched':
+        case 'confirmed':
+          return { color: '#FF9800', backgroundColor: '#FFF3E0' };
+        case 'pending':
+        case 'new':
+          return { color: '#2196F3', backgroundColor: '#E3F2FD' };
+        case 'cancelled':
+        case 'rejected':
+          return { color: '#F44336', backgroundColor: '#FFEBEE' };
+        default:
+          return { color: '#666', backgroundColor: '#F5F5F5' };
+      }
+    })();
+    console.log('getStatusStyles', { status, styles });
+    return styles;
+  };
+
+  console.log('OrderScreen render', {
+    isOpen,
+    search,
+    selectedOrderTab,
+    filterModalVisible,
+    orderDetailsModalVisible,
+    selectedOrder: selectedOrder?._id,
+    selectedPaymentMethod,
+    orderAmountRange,
+    vehicleNumber,
+    orders: orders.length,
+    loading,
+    error,
+  });
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Mandi Bhai</Text>
@@ -173,27 +231,28 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
           <TouchableOpacity style={styles.bellWrap}>
             <Text style={styles.bellIcon}>🔔</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>3</Text>
+              <Text style={styles.badgeText}>{orders.length}</Text>
             </View>
           </TouchableOpacity>
-          <Text style={styles.closedText}>CLOSED</Text>
-          <Switch 
-            value={isOpen} 
-            onValueChange={setIsOpen} 
-            trackColor={{ true: '#4CD964', false: '#E0E0E0' }} 
+          <Text style={styles.closedText}>{isOpen ? 'OPEN' : 'CLOSED'}</Text>
+          <Switch
+            value={isOpen}
+            onValueChange={(value) => {
+              console.log('Switch toggled', { isOpen: value });
+              setIsOpen(value);
+            }}
+            trackColor={{ true: '#4CD964', false: '#E0E0E0' }}
             thumbColor={'#fff'}
             style={styles.toggleSwitch}
           />
         </View>
       </View>
 
-      {/* Orders Section */}
       <View style={styles.ordersSection}>
         <Text style={styles.ordersTitle}>Orders</Text>
         <Text style={styles.ordersSubtitle}>Manage your customer orders</Text>
       </View>
 
-      {/* Search and Filter */}
       <View style={styles.searchFilterRow}>
         <View style={styles.searchContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -202,19 +261,24 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
             placeholder="Search orders..."
             placeholderTextColor="#999"
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(text) => {
+              console.log('Search input changed', { search: text });
+              setSearch(text);
+            }}
           />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.filterButton}
-          onPress={() => setFilterModalVisible(true)}
+          onPress={() => {
+            console.log('Filter button pressed', { filterModalVisible: true });
+            setFilterModalVisible(true);
+          }}
         >
           <Text style={styles.filterIcon}>▼</Text>
           <Text style={styles.filterText}>Filter</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Order Tabs */}
       <View style={styles.orderTabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.orderTabs}>
@@ -223,14 +287,19 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
                 key={tab.key}
                 style={[
                   styles.orderTab,
-                  selectedOrderTab === tab.key && styles.orderTabActive
+                  selectedOrderTab === tab.key && styles.orderTabActive,
                 ]}
-                onPress={() => setSelectedOrderTab(tab.key)}
+                onPress={() => {
+                  console.log('Order tab pressed', { tab: tab.key });
+                  setSelectedOrderTab(tab.key);
+                }}
               >
-                <Text style={[
-                  styles.orderTabText,
-                  selectedOrderTab === tab.key && styles.orderTabTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.orderTabText,
+                    selectedOrderTab === tab.key && styles.orderTabTextActive,
+                  ]}
+                >
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -239,127 +308,167 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
         </ScrollView>
       </View>
 
-      {/* Orders List */}
-      <ScrollView style={styles.ordersScrollView} showsVerticalScrollIndicator={false}>
-        {orders.map((order) => (
-          <TouchableOpacity 
-            key={order.id} 
-            style={styles.orderCard}
-            onPress={() => {
-              setSelectedOrder(order);
-              setOrderDetailsModalVisible(true);
-            }}
-          >
-            <View style={styles.orderHeader}>
-              <View style={styles.orderHeaderLeft}>
-                <Image source={order.avatar} style={styles.customerAvatar} />
-                <View style={styles.orderHeaderInfo}>
-                  <Text style={styles.orderId}>{order.id}</Text>
-                  <Text style={styles.customerName}>{order.customerName}</Text>
-                  <Text style={styles.customerPhone}>{order.phone}</Text>
-                  <Text style={styles.orderDate}>{order.date}</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3F51B5" />
+          <Text style={styles.loadingText}>Loading orders...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+        </View>
+      ) : orders.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No orders found</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.ordersScrollView} showsVerticalScrollIndicator={false}>
+          {orders
+            .filter((order) => {
+              const matches = search
+                ? order._id.toLowerCase().includes(search.toLowerCase()) ||
+                  order.retailerId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+                  order.retailerId?.phoneNumber?.toLowerCase().includes(search.toLowerCase())
+                : true;
+              console.log('Filtering order', { orderId: order._id, search, matches });
+              return matches;
+            })
+            .map((order) => (
+              <TouchableOpacity
+                key={order._id}
+                style={styles.orderCard}
+                onPress={() => {
+                  console.log('Order card pressed', { orderId: order._id });
+                  setSelectedOrder(order);
+                  setOrderDetailsModalVisible(true);
+                }}
+              >
+                <View style={styles.orderHeader}>
+                  <View style={styles.orderHeaderLeft}>
+                    <Image
+                      source={{ uri: order.retailerId?.avatar || 'https://via.placeholder.com/48' }}
+                      style={styles.customerAvatar}
+                    />
+                    <View style={styles.orderHeaderInfo}>
+                      <Text style={styles.orderId}>{order._id}</Text>
+                      <Text style={styles.customerName}>{order.retailerId?.name || 'Unknown'}</Text>
+                      <Text style={styles.customerPhone}>{order.retailerId?.phoneNumber || 'N/A'}</Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(order.createdAt).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.orderHeaderRight}>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusStyles(order.status).backgroundColor }]}>
+                      <Text style={[styles.statusText, { color: getStatusStyles(order.status).color }]}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </Text>
+                    </View>
+                    <View style={styles.pincodeContainer}>
+                      <Text style={styles.pincode}>{order.vehicleNumber || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.otpContainer}>
+                      <Text style={styles.otpLabel}>OTP: </Text>
+                      <Text style={styles.otpValue}>{order.otp || 'N/A'}</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.orderHeaderRight}>
-                <View style={[styles.statusBadge, { backgroundColor: order.statusBg }]}>
-                  <Text style={[styles.statusText, { color: order.statusColor }]}>
-                    {order.status}
-                  </Text>
+                <View style={styles.orderFooter}>
+                  <View style={styles.orderFooterLeft}>
+                    <Text style={styles.itemsCount}>{order.products?.length || 0} items</Text>
+                    <Text style={styles.paymentLabel}>Payment</Text>
+                  </View>
+                  <View style={styles.orderFooterRight}>
+                    <Text style={styles.orderAmount}>₹{order.orderTotal}</Text>
+                    <Text
+                      style={[
+                        styles.paymentStatus,
+                        { color: order.paymentMethod === 'cod' ? '#FF9800' : '#4CAF50' },
+                      ]}
+                    >
+                      {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.pincodeContainer}>
-                  <Text style={styles.pincode}>{order.pincode}</Text>
-                </View>
-                <View style={styles.otpContainer}>
-                  <Text style={styles.otpLabel}>OTP: </Text>
-                  <Text style={styles.otpValue}>{order.otp}</Text>
-                </View>
-              </View>
-            </View>
+              </TouchableOpacity>
+            ))}
+        </ScrollView>
+      )}
 
-            <View style={styles.orderFooter}>
-              <View style={styles.orderFooterLeft}>
-                <Text style={styles.itemsCount}>{order.items} items</Text>
-                <Text style={styles.paymentLabel}>Payment</Text>
-              </View>
-              <View style={styles.orderFooterRight}>
-                <Text style={styles.orderAmount}>₹{order.amount}</Text>
-                <Text style={[
-                  styles.paymentStatus,
-                  { color: order.payment === 'Paid online' ? '#4CAF50' : '#FF9800' }
-                ]}>
-                  {order.payment}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Filter Modal */}
       <Modal
         visible={filterModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={() => {
+          console.log('Filter modal closed', { filterModalVisible: false });
+          setFilterModalVisible(false);
+        }}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.filterModalOverlay}
           activeOpacity={1}
-          onPress={() => setFilterModalVisible(false)}
+          onPress={() => {
+            console.log('Filter modal overlay pressed', { filterModalVisible: false });
+            setFilterModalVisible(false);
+          }}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.filterModalContent}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <View style={styles.filterModalHeader}>
               <Text style={styles.filterModalTitle}>Filter Orders</Text>
             </View>
-
             <ScrollView style={styles.filterModalScrollView} showsVerticalScrollIndicator={false}>
-              {/* Date Range */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Date Range</Text>
-                <View style={styles.dateRangeContainer}>
-                  <TouchableOpacity style={styles.dateInput}>
-                    <Text style={styles.dateInputText}>-/-/-</Text>
-                    <Text style={styles.dateIcon}>📅</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.dateInput}>
-                    <Text style={styles.dateInputText}>-/-/-</Text>
-                    <Text style={styles.dateIcon}>📅</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Payment Method */}
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionTitle}>Payment Method</Text>
-                <TouchableOpacity style={styles.paymentMethodDropdown}>
-                  <Text style={styles.paymentMethodText}>{selectedPaymentMethod}</Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
-                </TouchableOpacity>
+                <View style={styles.paymentMethodOptions}>
+                  {['All', 'COD', 'Online', 'UPI', 'Card'].map((method) => (
+                    <TouchableOpacity
+                      key={method}
+                      style={[
+                        styles.paymentMethodOption,
+                        selectedPaymentMethod === method && styles.paymentMethodOptionActive,
+                      ]}
+                      onPress={() => {
+                        console.log('Payment method selected', { method });
+                        setSelectedPaymentMethod(method);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.paymentMethodOptionText,
+                          selectedPaymentMethod === method && styles.paymentMethodOptionTextActive,
+                        ]}
+                      >
+                        {method}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-
-              {/* Order Amount Range */}
               <View style={styles.filterSection}>
                 <View style={styles.amountRangeHeader}>
                   <Text style={styles.filterSectionTitle}>Order Amount Range</Text>
                   <Text style={styles.amountRangeValue}>₹{formatAmount(orderAmountRange)}</Text>
                 </View>
                 <View style={styles.sliderContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.sliderTrack}
                     activeOpacity={1}
                     onPress={(evt) => {
                       const locationX = evt.nativeEvent.locationX;
                       const newAmount = getAmountFromPosition(locationX);
+                      console.log('Slider track pressed', { locationX, newAmount });
                       setOrderAmountRange(newAmount);
                     }}
                   >
-                    <View 
-                      style={[styles.sliderThumb, { left: getSliderPosition(orderAmountRange) }]} 
+                    <View
+                      style={[styles.sliderThumb, { left: getSliderPosition(orderAmountRange) }]}
                       {...panResponder.panHandlers}
                     />
                   </TouchableOpacity>
@@ -368,10 +477,10 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
                   <Text style={styles.sliderLabel}>₹{formatAmount(minAmount)}</Text>
                   <Text style={styles.sliderLabel}>₹{formatAmount(maxAmount)}</Text>
                 </View>
-                <Text style={styles.ordersFoundText}>0 orders found in this range</Text>
+                <Text style={styles.ordersFoundText}>
+                  {orders.filter((o) => o.orderTotal <= orderAmountRange).length} orders found
+                </Text>
               </View>
-
-              {/* Vehicle Number */}
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionTitle}>Vehicle Number</Text>
                 <TextInput
@@ -379,16 +488,22 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
                   placeholder="Enter vehicle number"
                   placeholderTextColor="#999"
                   value={vehicleNumber}
-                  onChangeText={setVehicleNumber}
+                  onChangeText={(text) => {
+                    console.log('Vehicle number input changed', { vehicleNumber: text });
+                    setVehicleNumber(text);
+                  }}
                 />
               </View>
             </ScrollView>
-
-            {/* Footer Buttons */}
             <View style={styles.filterModalFooter}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.resetButton}
                 onPress={() => {
+                  console.log('Reset filters pressed', {
+                    selectedPaymentMethod: 'All',
+                    orderAmountRange: minAmount,
+                    vehicleNumber: '',
+                  });
                   setSelectedPaymentMethod('All');
                   setOrderAmountRange(minAmount);
                   setVehicleNumber('');
@@ -396,10 +511,7 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
               >
                 <Text style={styles.resetButtonText}>Reset</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.applyButton}
-                onPress={() => setFilterModalVisible(false)}
-              >
+              <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
                 <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
@@ -407,117 +519,173 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Order Details Modal */}
       <Modal
         visible={orderDetailsModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setOrderDetailsModalVisible(false)}
+        onRequestClose={() => {
+          console.log('Order details modal closed', { orderDetailsModalVisible: false });
+          setOrderDetailsModalVisible(false);
+        }}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.orderDetailsModalOverlay}
           activeOpacity={1}
-          onPress={() => setOrderDetailsModalVisible(false)}
+          onPress={() => {
+            console.log('Order details modal overlay pressed', { orderDetailsModalVisible: false });
+            setOrderDetailsModalVisible(false);
+          }}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.orderDetailsModalContent}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
             {selectedOrder && (
               <>
-                {/* Header */}
                 <View style={styles.orderDetailsHeader}>
-                  <Text style={styles.orderDetailsTitle}>Order Details</Text>
-                  <TouchableOpacity 
+                  <Text style={styles.orderDetailsTitle}>Order #{selectedOrder._id}</Text>
+                  <TouchableOpacity
                     style={styles.closeButton}
-                    onPress={() => setOrderDetailsModalVisible(false)}
+                    onPress={() => {
+                      console.log('Order details close button pressed', { orderDetailsModalVisible: false });
+                      setOrderDetailsModalVisible(false);
+                    }}
                   >
                     <Text style={styles.closeButtonText}>✕</Text>
                   </TouchableOpacity>
                 </View>
-
                 <ScrollView style={styles.orderDetailsScrollView} showsVerticalScrollIndicator={false}>
-                  {/* Customer Info */}
                   <View style={styles.customerInfoSection}>
                     <View style={styles.customerInfoLeft}>
-                      <Image source={selectedOrder.avatar} style={styles.customerInfoAvatar} />
+                      <Image
+                        source={{ uri: selectedOrder.retailerId?.avatar || 'https://via.placeholder.com/48' }}
+                        style={styles.customerInfoAvatar}
+                      />
                       <View style={styles.customerInfoDetails}>
-                        <Text style={styles.customerInfoName}>{selectedOrder.customerName}</Text>
-                        <Text style={styles.customerInfoPhone}>{selectedOrder.phone}</Text>
+                        <Text style={styles.customerInfoName}>{selectedOrder.retailerId?.name || 'Unknown'}</Text>
+                        <Text style={styles.customerInfoPhone}>{selectedOrder.retailerId?.phoneNumber || 'N/A'}</Text>
                       </View>
                     </View>
                     <View style={styles.customerInfoRight}>
-                      <Text style={styles.vehicleType}>{selectedOrder.vehicleType}</Text>
-                      <Text style={styles.vehicleSubtype}>{selectedOrder.vehicleSubtype}</Text>
+                      <Text style={styles.vehicleType}>{selectedOrder.vehicleNumber || 'N/A'}</Text>
+                      <Text style={styles.vehicleSubtype}>
+                        {selectedOrder.vehicleNumber ? 'Delivery Vehicle' : 'Not Assigned'}
+                      </Text>
                     </View>
                   </View>
-
-                  {/* Order Items */}
                   <View style={styles.orderItemsSection}>
                     <Text style={styles.orderItemsTitle}>Order Items</Text>
-                    {selectedOrder.orderItems.map((item: any, index: number) => (
-                      <View key={index} style={styles.orderItemCard}>
-                        <Image source={item.image} style={styles.orderItemImage} />
-                        <View style={styles.orderItemDetails}>
-                          <Text style={styles.orderItemName}>{item.name}</Text>
-                          <Text style={styles.orderItemQuantity}>{item.quantity} • {item.price}</Text>
+                    {selectedOrder.products?.map((item, index) => {
+                      console.log('Rendering order item', { index, item });
+                      return (
+                        <View key={index} style={styles.orderItemCard}>
+                          <Image
+                            source={{ uri: item.productId?.productImage || 'https://via.placeholder.com/40' }}
+                            style={styles.orderItemImage}
+                          />
+                          <View style={styles.orderItemDetails}>
+                            <Text style={styles.orderItemName}>{item.productId?.productName || 'Unknown'}</Text>
+                            <Text style={styles.orderItemQuantity}>
+                              {item.quantity} • ₹{(item.total / item.quantity).toFixed(2)}/unit
+                            </Text>
+                          </View>
+                          <Text style={styles.orderItemTotal}>₹{item.total}</Text>
                         </View>
-                        <Text style={styles.orderItemTotal}>{item.total}</Text>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
-
-                  {/* Order Summary */}
                   <View style={styles.orderSummarySection}>
                     <View style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Subtotal</Text>
-                      <Text style={styles.summaryValue}>₹{selectedOrder.subtotal}</Text>
+                      <Text style={styles.summaryValue}>₹{selectedOrder.orderTotal}</Text>
                     </View>
                     <View style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Delivery Fee</Text>
-                      <Text style={styles.summaryValue}>₹{selectedOrder.deliveryFee}</Text>
+                      <Text style={styles.summaryValue}>₹0</Text>
                     </View>
                     <View style={[styles.summaryRow, styles.totalRow]}>
                       <Text style={styles.totalLabel}>Total</Text>
-                      <Text style={styles.totalValue}>₹{selectedOrder.total}</Text>
+                      <Text style={styles.totalValue}>₹{selectedOrder.orderTotal}</Text>
                     </View>
                   </View>
-
-                  {/* Delivery Details */}
                   <View style={styles.deliveryDetailsSection}>
                     <Text style={styles.sectionTitle}>Delivery Details</Text>
                     <View style={styles.deliveryCard}>
                       <View style={styles.deliveryCardHeader}>
                         <Text style={styles.deliveryTruck}>🚚</Text>
-                        <Text style={styles.deliveryPincode}>{selectedOrder.pincode}</Text>
-                        <View style={styles.deliveryStatusBadge}>
-                          <Text style={styles.deliveryStatusText}>{selectedOrder.deliveryStatus}</Text>
+                        <Text style={styles.deliveryPincode}>{selectedOrder.vehicleNumber || 'N/A'}</Text>
+                        <View style={[styles.deliveryStatusBadge, { backgroundColor: getStatusStyles(selectedOrder.status).color }]}>
+                          <Text style={styles.deliveryStatusText}>
+                            {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                          </Text>
                         </View>
                       </View>
                       <View style={styles.deliveryCardFooter}>
-                        <Text style={styles.deliveryPhone}>{selectedOrder.phone}</Text>
+                        <Text style={styles.deliveryPhone}>{selectedOrder.retailerId?.phoneNumber || 'N/A'}</Text>
                         <View style={styles.deliveryActions}>
-                          <TouchableOpacity style={styles.callButton}>
+                          <TouchableOpacity
+                            style={styles.callButton}
+                            onPress={() => console.log('Call button pressed', { phone: selectedOrder.retailerId?.phoneNumber })}
+                          >
                             <Text style={styles.callIcon}>📞</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.messageButton}>
+                          <TouchableOpacity
+                            style={styles.messageButton}
+                            onPress={() => console.log('Message button pressed', { phone: selectedOrder.retailerId?.phoneNumber })}
+                          >
                             <Text style={styles.messageIcon}>💬</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
                     </View>
+                    <Text style={styles.deliveryAddress}>{selectedOrder.deliveryAddress || 'N/A'}</Text>
                   </View>
-
-                  {/* Payment Information */}
                   <View style={styles.paymentInfoSection}>
                     <Text style={styles.sectionTitle}>Payment Information</Text>
                     <View style={styles.paymentCard}>
                       <View style={styles.paymentCardContent}>
                         <Text style={styles.paymentIcon}>💳</Text>
-                        <Text style={styles.paymentMethod}>Paid online</Text>
+                        <Text style={styles.paymentMethod}>
+                          {selectedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
+                        </Text>
                       </View>
-                      <Text style={styles.modalPaymentStatus}>{selectedOrder.paymentStatus}</Text>
+                      <Text
+                        style={[
+                          styles.modalPaymentStatus,
+                          { color: selectedOrder.paymentStatus === 'paid' ? '#4CAF50' : '#FF9800' },
+                        ]}
+                      >
+                        {selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.orderActionsSection}>
+                    <Text style={styles.sectionTitle}>Update Order Status</Text>
+                    <View style={styles.orderActions}>
+                      {['confirmed', 'dispatched', 'delivered', 'rejected', 'cancelled'].map((status) => (
+                        <TouchableOpacity
+                          key={status}
+                          style={[
+                            styles.actionButton,
+                            selectedOrder.status === status && styles.actionButtonActive,
+                          ]}
+                          onPress={() => {
+                            console.log('Status button pressed', { orderId: selectedOrder._id, status });
+                            updateOrderStatus(selectedOrder._id, status);
+                          }}
+                          disabled={selectedOrder.status === status}
+                        >
+                          <Text
+                            style={[
+                              styles.actionButtonText,
+                              selectedOrder.status === status && styles.actionButtonTextActive,
+                            ]}
+                          >
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
                 </ScrollView>
@@ -527,19 +695,15 @@ const OrderScreen: React.FC<Props> = ({ onNavigate }) => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Bottom Tab */}
-      <BottomTab 
-        activeTab={activeTab} 
+      <BottomTab
+        activeTab={activeTab}
         onTabPress={(tab) => {
+          console.log('Bottom tab pressed', { tab });
           setActiveTab(tab);
-          if (tab === 'catalogue' && onNavigate) {
-            onNavigate('WholesalerHome');
-          } else if (tab === 'accounting' && onNavigate) {
-            onNavigate('AccountScreen');
-          } else if (tab === 'profile' && onNavigate) {
-            onNavigate('ProfileScreen');
+          if (onNavigate) {
+            onNavigate(tab);
           }
-        }} 
+        }}
       />
     </View>
   );
@@ -822,8 +986,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  
-  // Filter Modal Styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F44336',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+  },
   filterModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -846,7 +1036,6 @@ const styles = StyleSheet.create({
   filterModalHeader: {
     paddingHorizontal: 24,
     paddingVertical: 20,
-    borderBottomWidth: 0,
   },
   filterModalTitle: {
     fontSize: 22,
@@ -866,49 +1055,30 @@ const styles = StyleSheet.create({
     color: '#555',
     marginBottom: 16,
   },
-  dateRangeContainer: {
+  paymentMethodOptions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  dateInput: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
+  paymentMethodOption: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginHorizontal: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  dateInputText: {
-    fontSize: 16,
-    color: '#6C757D',
+  paymentMethodOptionActive: {
+    backgroundColor: '#3F51B5',
+    borderColor: '#3F51B5',
   },
-  dateIcon: {
-    fontSize: 18,
-    color: '#495057',
-  },
-  paymentMethodDropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  paymentMethodText: {
-    fontSize: 16,
-    color: '#495057',
-  },
-  dropdownArrow: {
+  paymentMethodOptionText: {
     fontSize: 14,
-    color: '#6C757D',
+    color: '#495057',
+  },
+  paymentMethodOptionTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   amountRangeHeader: {
     flexDirection: 'row',
@@ -973,7 +1143,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 24,
     paddingVertical: 24,
-    borderTopWidth: 0,
     gap: 12,
   },
   resetButton: {
@@ -1002,8 +1171,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  
-  // Order Details Modal Styles
   orderDetailsModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -1206,7 +1373,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deliveryStatusBadge: {
-    backgroundColor: '#FF9800',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1252,6 +1418,11 @@ const styles = StyleSheet.create({
   messageIcon: {
     fontSize: 16,
   },
+  deliveryAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+  },
   paymentInfoSection: {
     paddingVertical: 20,
   },
@@ -1279,7 +1450,34 @@ const styles = StyleSheet.create({
   modalPaymentStatus: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#4CAF50',
+  },
+  orderActionsSection: {
+    paddingVertical: 20,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  actionButtonActive: {
+    backgroundColor: '#3F51B5',
+    borderColor: '#3F51B5',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    color: '#495057',
+  },
+  actionButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

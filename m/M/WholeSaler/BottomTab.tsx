@@ -7,13 +7,13 @@ interface BottomTabProps {
 }
 
 const tabs = [
-  { key: 'catalogue', label: 'Catalogue', icon: '📦' },
-  { key: 'orders', label: 'Orders', icon: '📋' },
-  { key: 'accounting', label: 'Accounting', icon: '📈' },
-  { key: 'profile', label: 'Profile', icon: '👤' },
+  { key: 'WholesalerHome', label: 'Catalogue', icon: '📦' }, // Match Stack.Screen name
+  { key: 'Orders', label: 'Orders', icon: '📋' },
+  { key: 'Account', label: 'Accounting', icon: '📈' },
+  { key: 'Profile', label: 'Profile', icon: '👤' },
 ];
 
-const BottomTab: React.FC<BottomTabProps> = ({ activeTab = 'catalogue', onTabPress }) => {
+const BottomTab: React.FC<BottomTabProps> = ({ activeTab = 'WholesalerHome', onTabPress }) => {
   return (
     <View style={styles.tabBar}>
       {tabs.map(tab => (
@@ -39,6 +39,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     backgroundColor: '#fff',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   tabItem: {
     flex: 1,

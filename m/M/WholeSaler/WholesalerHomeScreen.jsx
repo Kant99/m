@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity } from 'react-native';
- import Header from './home/Header';
+import Header from './home/Header';
 import SummaryCard from './home/SummaryCard';
 import ProductCard from './home/ProductCard';
 import AddProductButton from './home/AddProductButton';
@@ -11,6 +11,7 @@ import ExpiringPriceModal from './home/ExpiringPriceModal';
 import ExpiredPriceModal from './home/ExpiredPriceModal';
 import SearchProductsModal from './home/SearchProductsModal';
 import AddNewProductModal from './home/AddNewProductModal';
+import BottomTab from './BottomTab'; // Adjust path
 import { summaryCards } from './home/data';
 import apiConnector from './../utils/apiConnector';
 
@@ -29,17 +30,42 @@ const WholesalerHomeScreen = ({ navigation }) => {
     searchProductsModalVisible: false,
     addNewProductModalVisible: false,
     selectedProduct: null,
-    gstCategory: 'Exempted',
+    gstCategory: 'exempted', // Match server-side casing
     quantityPricing: 'Applicable',
     products: [],
     loading: false,
     error: null,
+    activeTab: 'WholesalerHome', // Match BottomTab key
   });
 
   const toggleState = (key, value) => setState((prev) => ({ ...prev, [key]: value }));
 
-  // Load JWT token from AsyncStorage
-  
+  // Handle tab press
+  const handleTabPress = (tabKey) => {
+    console.log('Tab pressed:', tabKey);
+    console.log('Current navigation state:', navigation.getState());
+    toggleState('activeTab', tabKey);
+    switch (tabKey) {
+      case 'WholesalerHome':
+        // Already on WholesalerHomeScreen, no navigation needed
+        console.log('Already on WholesalerHomeScreen');
+        break;
+      case 'Orders':
+        navigation.navigate('Orders');
+        console.log('Navigating to Orders');
+        break;
+      case 'Account':
+        navigation.navigate('Account');
+        console.log('Navigating to Account');
+        break;
+      case 'Profile':
+        navigation.navigate('Profile');
+        console.log('Navigating to Profile');
+        break;
+      default:
+        console.warn('Unknown tab:', tabKey);
+    }
+  };
 
   // Fetch products
   const fetchProducts = useCallback(async () => {
@@ -47,8 +73,6 @@ const WholesalerHomeScreen = ({ navigation }) => {
     try {
       toggleState('loading', true);
       toggleState('error', null);
-
-     
 
       const response = await apiConnector.getAllProducts();
       console.log('response of all products:', response);
@@ -59,7 +83,12 @@ const WholesalerHomeScreen = ({ navigation }) => {
         stock: product.stock,
         price: product.priceBeforeGst,
         tags: product.tags || [],
-        img: product.productImage ,
+        img: product.productImage,
+        categoryName: product.categoryName,
+        productDescription: product.productDescription,
+        gstCategory: product.gstCategory,
+        gstPercent: product.gstPercent,
+        priceUnit: product.priceUnit,
       }));
       console.log('mappedProducts:', mappedProducts);
       toggleState('products', mappedProducts);
@@ -78,6 +107,7 @@ const WholesalerHomeScreen = ({ navigation }) => {
 
   const handleCardPress = (key) => {
     if (key === 'kyc') {
+      console.log('Navigating to Kyc');
       navigation.navigate('Kyc');
     } else {
       toggleState(`${key}ModalVisible`, true);
@@ -91,6 +121,11 @@ const WholesalerHomeScreen = ({ navigation }) => {
     toggleState('expiredPriceModalVisible', false);
   };
 
+  // Handle product update success to refresh products
+  const handleUpdateSuccess = () => {
+    fetchProducts();
+  };
+
   return (
     <View style={styles.container}>
       {state.addProductDropdownVisible && (
@@ -100,7 +135,10 @@ const WholesalerHomeScreen = ({ navigation }) => {
         />
       )}
       <Header
-        onNavigate={(screen) => navigation.navigate(screen)}
+        onNavigate={(screen) => {
+          console.log('Header navigating to:', screen);
+          navigation.navigate(screen);
+        }}
         isOpen={state.isOpen}
         setIsOpen={(value) => toggleState('isOpen', value)}
       />
@@ -141,6 +179,7 @@ const WholesalerHomeScreen = ({ navigation }) => {
             ))}
         </View>
       </ScrollView>
+      <BottomTab activeTab={state.activeTab} onTabPress={handleTabPress} />
       <EditProductModal
         visible={state.editModalVisible}
         onClose={() => toggleState('editModalVisible', false)}
@@ -149,6 +188,7 @@ const WholesalerHomeScreen = ({ navigation }) => {
         setGstCategory={(value) => toggleState('gstCategory', value)}
         quantityPricing={state.quantityPricing}
         setQuantityPricing={(value) => toggleState('quantityPricing', value)}
+        onUpdateSuccess={handleUpdateSuccess}
       />
       <OutOfStockModal
         visible={state.outOfStockModalVisible}
@@ -209,6 +249,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 12,
     marginTop: 12,
+    marginBottom: 60, // Space for BottomTab
   },
   cardsContainer: {
     flexDirection: 'row',

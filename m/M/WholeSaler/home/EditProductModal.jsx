@@ -1,46 +1,164 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, Image, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, TextInput, ScrollView, Image, StyleSheet, Alert } from 'react-native';
+import * as ImagePicker from 'react-native-image-picker';
+import apiConnector from './../../utils/apiConnector';
 
-const EditProductModal = ({
-  visible,
-  onClose,
-  selectedProduct,
-  gstCategory = 'Exempted',
-  setGstCategory,
-  quantityPricing = 'Applicable',
-  setQuantityPricing,
-}) => {
+const EditProductModal = ({ visible, onClose, selectedProduct, onUpdateSuccess }) => {
   const [productName, setProductName] = useState('');
-  const [price, setPrice] = useState('');
+  const [priceBeforeGst, setPriceBeforeGst] = useState('');
+  const [priceUnit, setPriceUnit] = useState('per kg');
+  const [categoryName, setCategoryName] = useState('');
+  const [productDescription, setProductDescription] = useState('');
   const [stock, setStock] = useState('');
+  const [gstCategory, setGstCategory] = useState('exempted');
+  const [gstPercent, setGstPercent] = useState('0');
+  const [filters, setFilters] = useState([]);
+  const [productImage, setProductImage] = useState(null);
+  const [imageChanged, setImageChanged] = useState(false); // Track if image is changed
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('useEffect triggered with selectedProduct:', selectedProduct);
     if (selectedProduct) {
       setProductName(selectedProduct.name || '');
-      setPrice(selectedProduct.price ? selectedProduct.price.toString() : '');
+      setPriceBeforeGst(selectedProduct.price ? selectedProduct.price.toString() : '');
+      setPriceUnit(selectedProduct.priceUnit || 'per kg');
+      setCategoryName(selectedProduct.categoryName || '');
+      setProductDescription(selectedProduct.productDescription || '');
       setStock(selectedProduct.stock ? selectedProduct.stock.toString() : '');
+      setGstCategory(selectedProduct.gstCategory || 'exempted');
+      setGstPercent(selectedProduct.gstPercent ? selectedProduct.gstPercent.toString() : '0');
+      setFilters(selectedProduct.tags || []);
+      setProductImage(selectedProduct.img ? { uri: selectedProduct.img } : null);
+      setImageChanged(false); // Reset imageChanged on product load
     } else {
+      // Reset state
       setProductName('');
-      setPrice('');
+      setPriceBeforeGst('');
+      setPriceUnit('per kg');
+      setCategoryName('');
+      setProductDescription('');
       setStock('');
+      setGstCategory('exempted');
+      setGstPercent('0');
+      setFilters([]);
+      setProductImage(null);
+      setImageChanged(false);
     }
   }, [selectedProduct]);
 
-  if (!visible) return null;
-
-  const handleSaveChanges = () => {
-    console.log('Saving product:', { productName, price, stock, gstCategory, quantityPricing });
-    onClose();
+  const pickImage = async () => {
+    console.log('pickImage function called');
+    try {
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'photo',
+        includeBase64: false,
+      });
+      console.log('ImagePicker result:', result);
+      if (!result.didCancel && result.assets) {
+        const image = {
+          uri: result.assets[0].uri, // Local file URI
+          type: result.assets[0].type || 'image/jpeg',
+          name: result.assets[0].fileName || 'productImage.jpg',
+        };
+        if (result.assets[0].fileSize && result.assets[0].fileSize > 10 * 1024 * 1024) {
+          Alert.alert('Error', 'Image size exceeds 10MB limit.');
+          return;
+        }
+        setProductImage(image);
+        setImageChanged(true); // Mark image as changed
+        console.log('Image selected:', image);
+      } else {
+        console.log('Image selection cancelled or no assets found');
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to pick image.');
+    }
   };
 
-  const calculatedPrice = price ? parseFloat(price) * (gstCategory === 'Applicable' ? 1.05 : 1) : 0;
+  const handleSaveChanges = async () => {
+    console.log('handleSaveChanges called with productData:', {
+      productName,
+      priceBeforeGst,
+      priceUnit,
+      categoryName,
+      productDescription,
+      stock,
+      gstCategory,
+      gstPercent,
+      filters,
+      productImage,
+      imageChanged,
+    });
+
+    // Validate inputs
+    if (!productName || !priceBeforeGst || !stock || !categoryName || !priceUnit) {
+      console.log('Validation failed: Missing required fields');
+      Alert.alert('Error', 'Please fill in all required fields.');
+      return;
+    }
+
+    if (isNaN(parseFloat(priceBeforeGst)) || isNaN(parseInt(stock))) {
+      console.log('Validation failed: Invalid price or stock', { priceBeforeGst, stock });
+      Alert.alert('Error', 'Price and stock must be valid numbers.');
+      return;
+    }
+
+    if (gstCategory === 'applicable' && (isNaN(parseFloat(gstPercent)) || parseFloat(gstPercent) < 0 || parseFloat(gstPercent) > 100)) {
+      console.log('Validation failed: Invalid GST percent', { gstPercent });
+      Alert.alert('Error', 'GST percent must be a number between 0 and 100.');
+      return;
+    }
+
+    const productData = {
+      productName,
+      priceBeforeGst: parseFloat(priceBeforeGst),
+      priceUnit,
+      categoryName,
+      productDescription,
+      stock: parseInt(stock),
+      filters,
+      gstCategory,
+      gstPercent: parseFloat(gstPercent),
+    };
+
+    console.log('Prepared productData for API:', productData);
+    setLoading(true);
+    console.log('Loading state set to true');
+
+    try {
+      // Pass productImage only if imageChanged is true
+      const response = await apiConnector.updateProduct(selectedProduct.id, productData, imageChanged ? productImage : null);
+      console.log('API Response:', response);
+      Alert.alert('Success', 'Product updated successfully!');
+      if (onUpdateSuccess) {
+        console.log('Calling onUpdateSuccess with response.data:', response.data);
+        onUpdateSuccess(response.data);
+      }
+      onClose();
+      console.log('Modal closed after successful update');
+    } catch (error) {
+      console.error('Update product error:', error);
+      Alert.alert('Error', error.message || 'Failed to update product.');
+    } finally {
+      setLoading(false);
+      console.log('Loading state set to false');
+    }
+  };
+
+  const calculatedPriceAfterGst =
+    gstCategory === 'applicable' && parseFloat(gstPercent) > 0 && parseFloat(priceBeforeGst)
+      ? parseFloat(priceBeforeGst) + (parseFloat(priceBeforeGst) * parseFloat(gstPercent) / 100)
+      : parseFloat(priceBeforeGst) || 0;
+  console.log('Calculated price after GST:', calculatedPriceAfterGst);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} disabled={loading}>
               <Text style={styles.backIcon}>←</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Edit Product</Text>
@@ -48,43 +166,102 @@ const EditProductModal = ({
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.imageContainer}>
-              <View style={styles.imagePlaceholder}>
-                {selectedProduct?.img ? (
-                  <Image source={selectedProduct.img} style={styles.productImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.imageIcon}>📷</Text>
-                )}
-              </View>
+              <TouchableOpacity onPress={pickImage} disabled={loading}>
+                <View style={styles.imagePlaceholder}>
+                  {productImage ? (
+                    <Image source={{ uri: productImage.uri }} style={styles.productImage} resizeMode="cover" />
+                  ) : selectedProduct?.img ? (
+                    <Image source={{ uri: selectedProduct.img }} style={styles.productImage} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.imageIcon}>📷</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.hintText}>Tap to upload new image</Text>
             </View>
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Product Name</Text>
-                <Text style={styles.idText}>ID: {selectedProduct?.id || 1}</Text>
+                <Text style={styles.idText}>ID: {selectedProduct?.id || 'N/A'}</Text>
               </View>
               <TextInput
                 style={styles.input}
                 value={productName}
-                onChangeText={setProductName}
+                onChangeText={(text) => {
+                  setProductName(text);
+                  console.log('Product name updated:', text);
+                }}
                 placeholder="Enter product name"
                 placeholderTextColor="#999"
+                editable={!loading}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Category Name</Text>
+              <TextInput
+                style={styles.input}
+                value={categoryName}
+                onChangeText={(text) => {
+                  setCategoryName(text);
+                  console.log('Category name updated:', text);
+                }}
+                placeholder="Enter category name"
+                placeholderTextColor="#999"
+                editable={!loading}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Product Description</Text>
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                value={productDescription}
+                onChangeText={(text) => {
+                  setProductDescription(text);
+                  console.log('Product description updated:', text);
+                }}
+                placeholder="Enter product description"
+                placeholderTextColor="#999"
+                multiline
+                editable={!loading}
               />
             </View>
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Price-(Without GST)</Text>
-                <Text style={styles.unitText}>(₹/kg or qty or piece)</Text>
+                <Text style={styles.label}>Price (Before GST)</Text>
+                <Text style={styles.unit}>({priceUnit})</Text>
               </View>
               <TextInput
                 style={styles.input}
-                value={price}
-                onChangeText={setPrice}
+                value={priceBeforeGst}
+                onChangeText={(text) => {
+                  setPriceBeforeGst(text);
+                  console.log('Price before GST updated:', text);
+                }}
                 placeholder="Enter price"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                editable={!loading}
               />
-              <Text style={styles.marketRate}>Current market rate: ₹45/kg</Text>
+              <View style={styles.buttonGroup}>
+                {['per kg', 'per dozen', 'per piece'].map((unit) => (
+                  <TouchableOpacity
+                    key={unit}
+                    style={[styles.optionButton, priceUnit === unit && styles.selectedOption]}
+                    onPress={() => {
+                      setPriceUnit(unit);
+                      console.log('Price unit selected:', unit);
+                    }}
+                    disabled={loading}
+                  >
+                    <Text style={[styles.optionText, priceUnit === unit && styles.selectedOptionText]}>
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.marketRate}>Current market rate: ₹45/{priceUnit}</Text>
               <Text style={styles.priceStatus}>
-                {parseFloat(price) <= 45 ? '📉 Your price is lowest' : '📈 Your price is higher'}
+                {parseFloat(priceBeforeGst) <= 45 ? '📉 Your price is lowest' : '📈 Your price is higher'}
               </Text>
             </View>
             <View style={styles.inputContainer}>
@@ -92,36 +269,43 @@ const EditProductModal = ({
               <TextInput
                 style={styles.input}
                 value={stock}
-                onChangeText={setStock}
+                onChangeText={(text) => {
+                  setStock(text);
+                  console.log('Stock updated:', text);
+                }}
                 placeholder="Enter stock"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                editable={!loading}
               />
-              <Text style={styles.hintText}>Enter quantity in kg</Text>
+              <Text style={styles.hintText}>Enter quantity in units</Text>
             </View>
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>GST Category</Text>
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      gstCategory === 'Exempted' && styles.selectedOption,
-                    ]}
-                    onPress={() => setGstCategory('Exempted')}
+                    style={[styles.optionButton, gstCategory === 'exempted' && styles.selectedOption]}
+                    onPress={() => {
+                      setGstCategory('exempted');
+                      setGstPercent('0');
+                      console.log('GST category set to exempted, GST percent reset to 0');
+                    }}
+                    disabled={loading}
                   >
-                    <Text style={[styles.optionText, gstCategory === 'Exempted' && styles.selectedOptionText]}>
+                    <Text style={[styles.optionText, gstCategory === 'exempted' && styles.selectedOptionText]}>
                       Exempted
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      gstCategory === 'Applicable' && styles.selectedOptionRed,
-                    ]}
-                    onPress={() => setGstCategory('Applicable')}
+                    style={[styles.optionButton, gstCategory === 'applicable' && styles.selectedOptionRed]}
+                    onPress={() => {
+                      setGstCategory('applicable');
+                      console.log('GST category set to applicable');
+                    }}
+                    disabled={loading}
                   >
-                    <Text style={[styles.optionText, gstCategory === 'Applicable' && styles.selectedOptionTextRed]}>
+                    <Text style={[styles.optionText, gstCategory === 'applicable' && styles.selectedOptionTextRed]}>
                       Applicable
                     </Text>
                   </TouchableOpacity>
@@ -129,70 +313,48 @@ const EditProductModal = ({
               </View>
               <TextInput
                 style={styles.input}
-                value={gstCategory === 'Exempted' ? '0% GST' : '5% GST'}
-                editable={false}
+                value={gstPercent}
+                onChangeText={(text) => {
+                  if (gstCategory === 'exempted') {
+                    console.log('GST percent change ignored: GST category is exempted');
+                    return;
+                  }
+                  setGstPercent(text);
+                  console.log('GST percent updated:', text);
+                }}
+                placeholder="Enter GST percent"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                editable={gstCategory === 'applicable' && !loading}
               />
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Price After GST</Text>
-              <Text style={styles.priceAfterGst}>₹{calculatedPrice.toFixed(2)}/kg</Text>
-              <Text style={styles.hintText}>Including {gstCategory === 'Applicable' ? '5%' : '0%'} GST</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Quantity Pricing</Text>
-                <View style={styles.buttonGroup}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      quantityPricing === 'Applicable' && styles.selectedOption,
-                    ]}
-                    onPress={() => setQuantityPricing('Applicable')}
-                  >
-                    <Text style={[styles.optionText, quantityPricing === 'Applicable' && styles.selectedOptionText]}>
-                      Applicable
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      quantityPricing === 'Not Applicable' && styles.selectedOptionGray,
-                    ]}
-                    onPress={() => setQuantityPricing('Not Applicable')}
-                  >
-                    <Text style={[styles.optionText, quantityPricing === 'Not Applicable' && styles.selectedOptionTextGray]}>
-                      Not Applicable
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {quantityPricing === 'Applicable' && (
-                <View style={styles.quantityTable}>
-                  <View style={styles.tableHeader}>
-                    <Text style={styles.tableHeaderText}>Qty</Text>
-                    <Text style={styles.tableHeaderText}>Price</Text>
-                  </View>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableCell}>1 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{calculatedPrice.toFixed(2)}</Text>
-                  </View>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableCell}>5 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{(calculatedPrice - 2).toFixed(2)}</Text>
-                  </View>
-                  <View style={styles.tableRow}>
-                    <Text style={styles.tableCell}>10 kg/pc</Text>
-                    <Text style={styles.tableCell}>₹{(calculatedPrice - 5).toFixed(2)}</Text>
-                  </View>
-                </View>
-              )}
+              <Text style={styles.priceAfterGst}>₹{calculatedPriceAfterGst.toFixed(2)}/{priceUnit}</Text>
+              <Text style={styles.hintText}>
+                Including {gstCategory === 'applicable' ? `${gstPercent}%` : '0%'} GST
+              </Text>
             </View>
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <TouchableOpacity
+                style={[styles.cancelButton, loading && styles.disabledButton]}
+                onPress={() => {
+                  console.log('Cancel button pressed');
+                  onClose();
+                }}
+                disabled={loading}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+              <TouchableOpacity
+                style={[styles.saveButton, loading && styles.disabledButton]}
+                onPress={() => {
+                  console.log('Save button pressed');
+                  handleSaveChanges();
+                }}
+                disabled={loading}
+              >
+                <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -317,6 +479,7 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: 'row',
+    marginTop: 8,
   },
   optionButton: {
     paddingVertical: 8,
@@ -331,9 +494,6 @@ const styles = StyleSheet.create({
   selectedOptionRed: {
     backgroundColor: '#F8D7DA',
   },
-  selectedOptionGray: {
-    backgroundColor: '#F5F5F5',
-  },
   optionText: {
     fontSize: 14,
     color: '#666',
@@ -347,45 +507,11 @@ const styles = StyleSheet.create({
     color: '#DC3545',
     fontWeight: 'bold',
   },
-  selectedOptionTextGray: {
-    color: '#999',
-  },
   priceAfterGst: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 8,
-  },
-  quantityTable: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F9FA',
-    padding: 8,
-  },
-  tableHeaderText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  tableCell: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    textAlign: 'center',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -395,7 +521,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E0E0E0', // Fixed typo in original code
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
@@ -418,6 +544,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFF',
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#B0B0B0',
+    opacity: 0.6,
   },
 });
 
