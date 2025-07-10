@@ -1,19 +1,14 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-interface BottomTabProps {
-  activeTab?: string;
-  onTabPress?: (tabKey: string) => void;
-}
+const BottomTab = ({ activeTab = 'WholesalerHome', onTabPress }) => {
+  const tabs = [
+    { key: 'WholesalerHome', label: 'Catalogue', icon: '📦' },
+    { key: 'Orders', label: 'Orders', icon: '📋' },
+    { key: 'Account', label: 'Accounting', icon: '📈' },
+    { key: 'Profile', label: 'Profile', icon: '👤' },
+  ];
 
-const tabs = [
-  { key: 'WholesalerHome', label: 'Catalogue', icon: '📦' }, // Match Stack.Screen name
-  { key: 'Orders', label: 'Orders', icon: '📋' },
-  { key: 'Account', label: 'Accounting', icon: '📈' },
-  { key: 'Profile', label: 'Profile', icon: '👤' },
-];
-
-const BottomTab: React.FC<BottomTabProps> = ({ activeTab = 'WholesalerHome', onTabPress }) => {
   return (
     <View style={styles.tabBar}>
       {tabs.map(tab => (

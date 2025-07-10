@@ -10,13 +10,8 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import type { AppScreen } from '../App';
 
-type Props = {
-  onNavigate: (screen: AppScreen) => void;
-};
-
-const KycScreen1: React.FC<Props> = ({ onNavigate }) => {
+const KycScreen1 = ({ onNavigate }) => {
   const [fullName, setFullName] = useState('Rajesh Kumar Gupta');
   const [email, setEmail] = useState('rajesh.gupta@gmail.c...');
   const [phone, setPhone] = useState('+91 98765 43210');
@@ -41,7 +36,7 @@ const KycScreen1: React.FC<Props> = ({ onNavigate }) => {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [activeProductTab, setActiveProductTab] = useState('All');
   const [productDetailModalVisible, setProductDetailModalVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
 
   const steps = [
@@ -153,12 +148,12 @@ const KycScreen1: React.FC<Props> = ({ onNavigate }) => {
                 </Text>
               </View>
               <Text style={styles.stepTitle}>{step.title}</Text>
-                             <View style={styles.statusContainer}>
-                 <View style={styles.statusIconContainer}>
-                   {step.status === 'Accepted' && <Text style={styles.acceptedIcon}>✓</Text>}
-                   {step.status === 'Rejected' && <Text style={styles.rejectedIcon}>✕</Text>}
-                   {step.status === 'Pending' && <Text style={styles.pendingIcon}>⏳</Text>}
-                 </View>
+              <View style={styles.statusContainer}>
+                <View style={styles.statusIconContainer}>
+                  {step.status === 'Accepted' && <Text style={styles.acceptedIcon}>✓</Text>}
+                  {step.status === 'Rejected' && <Text style={styles.rejectedIcon}>✕</Text>}
+                  {step.status === 'Pending' && <Text style={styles.pendingIcon}>⏳</Text>}
+                </View>
                 <Text style={[styles.statusLabel, { color: step.statusColor }]}>
                   {step.status}
                 </Text>
@@ -615,7 +610,7 @@ const KycScreen1: React.FC<Props> = ({ onNavigate }) => {
               {/* Product Filter Tabs */}
               <View style={styles.productTabsContainer}>
                 {productTabs.map((tab, index) => {
-                  const counts: { [key: string]: string } = { All: '(6)', Verified: '(3)', Pending: '(2)', Rejected: '(1)' };
+                  const counts = { All: '(6)', Verified: '(3)', Pending: '(2)', Rejected: '(1)' };
                   return (
                     <TouchableOpacity
                       key={index}
@@ -1447,10 +1442,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  documentIcon: {
-    fontSize: 20,
-    color: '#fff',
-  },
   documentIconImage: {
     width: 20,
     height: 20,
@@ -1563,18 +1554,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  bankAccountPlaceholder: {
-    padding: 40,
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  bankAccountPlaceholderText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-  },
   bankInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1602,14 +1581,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: '#fff',
   },
   bankDropdownText: {
-    flex: 1,
     fontSize: 16,
-    marginLeft: 12,
+    color: '#333',
   },
   bankDropdownArrow: {
     fontSize: 12,
@@ -1617,17 +1595,16 @@ const styles = StyleSheet.create({
   },
   productsSection: {
     marginTop: 24,
+    marginBottom: 24,
   },
   productStatusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   productStatusTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
   },
   productStatusSubtitle: {
     fontSize: 14,
@@ -1636,53 +1613,56 @@ const styles = StyleSheet.create({
   productSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    marginBottom: 16,
   },
   productSearchIcon: {
     fontSize: 16,
-    color: '#999',
-    marginRight: 12,
+    color: '#666',
+    marginRight: 8,
   },
   productSearchInput: {
     flex: 1,
+    paddingVertical: 12,
     fontSize: 16,
     color: '#333',
-    paddingVertical: 0,
   },
   productTabsContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   productTab: {
     flex: 1,
+    paddingVertical: 10,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+    marginHorizontal: 4,
   },
   productTabActive: {
-    borderBottomColor: '#4285F4',
+    backgroundColor: '#4285F4',
   },
   productTabText: {
-    fontSize: 16,
+    fontSize: 14,
+    color: '#666',
     fontWeight: '500',
-    color: '#999',
-    marginBottom: 2,
   },
   productTabTextActive: {
-    color: '#4285F4',
+    color: '#fff',
     fontWeight: '600',
   },
   productTabCount: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
   },
   productTabCountActive: {
-    color: '#4285F4',
+    color: '#fff',
   },
   productsGrid: {
     flexDirection: 'row',
@@ -1693,21 +1673,22 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    marginBottom: 16,
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#F5F5F5',
+    height: 100,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   productCardContent: {
     padding: 12,
   },
   productName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
@@ -1728,17 +1709,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   productStatusVerified: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: '#E8F5E9',
   },
   productStatusPending: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: '#FFF3E0',
   },
   productStatusRejected: {
-    backgroundColor: '#FFE8E8',
+    backgroundColor: '#FFEBEE',
   },
   productStatusText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
   },
   productStatusTextVerified: {
     color: '#4CAF50',
@@ -1750,33 +1731,27 @@ const styles = StyleSheet.create({
     color: '#F44336',
   },
   productDate: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 12,
+    color: '#666',
   },
   productModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+    justifyContent: 'flex-end',
   },
   productModalContent: {
-    width: '100%',
-    height: '100%',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '90%',
+    paddingBottom: 20,
   },
   productModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
@@ -1792,23 +1767,19 @@ const styles = StyleSheet.create({
   },
   productModalScrollView: {
     flex: 1,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
   },
   productModalImageContainer: {
-    height: 180,
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
+    marginVertical: 16,
   },
   productModalImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    resizeMode: 'cover',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
   },
   productModalInfo: {
-    padding: 16,
+    paddingHorizontal: 4,
   },
   productModalName: {
     fontSize: 20,
@@ -1818,24 +1789,24 @@ const styles = StyleSheet.create({
   },
   productModalStatusRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
   productModalStatusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 12,
+    borderRadius: 12,
   },
   productModalStatusVerified: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: '#E8F5E9',
   },
   productModalStatusRejected: {
-    backgroundColor: '#FFE8E8',
+    backgroundColor: '#FFEBEE',
   },
   productModalStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
   },
   productModalStatusTextVerified: {
     color: '#4CAF50',
@@ -1844,19 +1815,20 @@ const styles = StyleSheet.create({
     color: '#F44336',
   },
   productModalDate: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
   },
   rejectionReasonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFE8E8',
-    padding: 12,
+    backgroundColor: '#FFEBEE',
     borderRadius: 8,
+    padding: 12,
     marginBottom: 16,
   },
   rejectionReasonIcon: {
     fontSize: 16,
+    color: '#F44336',
     marginRight: 8,
   },
   rejectionReasonText: {
@@ -1867,31 +1839,31 @@ const styles = StyleSheet.create({
   productModalPricing: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   priceItem: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
   },
   priceValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#333',
+    marginRight: 4,
   },
   priceUnit: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
-    marginLeft: 4,
   },
   productDetailsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   detailItem: {
     width: '48%',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   detailLabel: {
     fontSize: 14,
@@ -1899,8 +1871,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#333',
   },
   stockContainer: {
@@ -1912,36 +1884,37 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#4CAF50',
-    marginRight: 8,
+    marginRight: 4,
   },
   stockValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#333',
   },
   specificationsTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   specificationsGrid: {
-    marginBottom: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   specItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    width: '48%',
+    marginBottom: 12,
   },
   specLabel: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 4,
   },
   specValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#333',
   },
   productModalActions: {
@@ -1954,62 +1927,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4285F4',
-    paddingVertical: 12,
+    backgroundColor: '#E3F2FD',
     borderRadius: 8,
+    paddingVertical: 12,
     marginRight: 8,
   },
   editButtonIcon: {
     fontSize: 16,
+    color: '#4285F4',
     marginRight: 8,
   },
   editButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4285F4',
   },
   deleteButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#F44336',
-    paddingVertical: 12,
+    backgroundColor: '#FFEBEE',
     borderRadius: 8,
+    paddingVertical: 12,
     marginLeft: 8,
   },
   deleteButtonIcon: {
     fontSize: 16,
+    color: '#F44336',
     marginRight: 8,
   },
   deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#F44336',
   },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#4285F4',
-    paddingVertical: 12,
+    backgroundColor: '#4285F4',
     borderRadius: 8,
-    marginBottom: 16,
+    paddingVertical: 12,
   },
   downloadButtonIcon: {
     fontSize: 16,
+    color: '#fff',
     marginRight: 8,
   },
   downloadButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4285F4',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
   },
-  // Status Modal Styles
   statusModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -2017,77 +1987,79 @@ const styles = StyleSheet.create({
   },
   statusModalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '90%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '90%',
     paddingBottom: 20,
   },
   statusModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   statusModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
   },
   statusModalClose: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#666',
     fontWeight: 'bold',
   },
   statusModalScrollView: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
   },
   statusProgressInfo: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: '#E3F2FD',
-    padding: 16,
     borderRadius: 8,
-    marginVertical: 20,
+    padding: 12,
+    marginTop: 16,
+    marginBottom: 16,
   },
   statusInfoIcon: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#2196F3',
+    backgroundColor: '#4285F4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    marginTop: 2,
+    marginRight: 8,
   },
   statusInfoIconText: {
     fontSize: 14,
     color: '#fff',
+    fontWeight: 'bold',
   },
   statusInfoText: {
-    flex: 1,
     fontSize: 14,
-    color: '#1976D2',
-    lineHeight: 20,
+    color: '#333',
+    flex: 1,
   },
   verificationSteps: {
-    marginBottom: 30,
+    marginBottom: 16,
   },
   verificationStep: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   stepIconContainer: {
-    marginRight: 16,
+    width: 32,
+    alignItems: 'center',
+    marginRight: 12,
   },
   stepIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2095,34 +2067,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   stepIconInProgress: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#FF9800',
   },
   stepIconPending: {
     backgroundColor: '#E0E0E0',
   },
   stepIconText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff',
     fontWeight: 'bold',
   },
   stepContent: {
     flex: 1,
-    marginRight: 16,
   },
   statusStepTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   progressBar: {
     height: 4,
     backgroundColor: '#E0E0E0',
     borderRadius: 2,
-    overflow: 'hidden',
   },
   progressFill: {
-    height: '100%',
+    height: 4,
     borderRadius: 2,
   },
   progressCompleted: {
@@ -2130,25 +2100,27 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressInProgress: {
-    backgroundColor: '#2196F3',
-    width: '60%',
+    backgroundColor: '#FF9800',
+    width: '50%',
   },
   progressPending: {
     backgroundColor: '#E0E0E0',
     width: '0%',
   },
   stepStatus: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    color: '#4CAF50',
+    color: '#666',
+    marginLeft: 12,
   },
   stepStatusInProgress: {
-    color: '#2196F3',
+    color: '#FF9800',
   },
   stepStatusPending: {
     color: '#999',
   },
   statusTermsContainer: {
+    marginTop: 16,
     marginBottom: 24,
   },
   statusCheckbox: {
@@ -2201,7 +2173,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
 });
 

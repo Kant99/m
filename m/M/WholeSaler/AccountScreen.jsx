@@ -8,13 +8,8 @@ import {
   ScrollView,
 } from 'react-native';
 import BottomTab from './BottomTab';
-import type { AppScreen } from '../App';
 
-type Props = {
-  onNavigate?: (screen: AppScreen) => void;
-};
-
-const AccountScreen: React.FC<Props> = ({ onNavigate }) => {
+const AccountScreen = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('accounting');
   const [chartPeriod, setChartPeriod] = useState('week');
@@ -274,6 +269,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',

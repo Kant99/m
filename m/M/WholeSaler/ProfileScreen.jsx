@@ -11,13 +11,8 @@ import {
   TextInput,
 } from 'react-native';
 import BottomTab from './BottomTab';
-import type { AppScreen } from '../App';
 
-type Props = {
-  onNavigate: (screen: AppScreen) => void;
-};
-
-const ProfileScreen: React.FC<Props> = ({ onNavigate }) => {
+const ProfileScreen = ({ onNavigate }) => {
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
@@ -364,8 +359,7 @@ const ProfileScreen: React.FC<Props> = ({ onNavigate }) => {
 
             <ScrollView style={styles.modalScrollView}>
               {Object.keys(businessHours).map((day) => {
-                const dayKey = day as keyof typeof businessHours;
-                const dayData = businessHours[dayKey];
+                const dayData = businessHours[day];
                 
                 return (
                   <View key={day} style={styles.dayRow}>
@@ -379,7 +373,7 @@ const ProfileScreen: React.FC<Props> = ({ onNavigate }) => {
                       onPress={() => {
                         setBusinessHours(prev => ({
                           ...prev,
-                          [dayKey]: { ...prev[dayKey], isOpen: !prev[dayKey].isOpen }
+                          [day]: { ...prev[day], isOpen: !prev[day].isOpen }
                         }));
                       }}
                     >
@@ -399,7 +393,7 @@ const ProfileScreen: React.FC<Props> = ({ onNavigate }) => {
                           onChangeText={(text) => {
                             setBusinessHours(prev => ({
                               ...prev,
-                              [dayKey]: { ...prev[dayKey], startTime: text }
+                              [day]: { ...prev[day], startTime: text }
                             }));
                           }}
                         />
@@ -410,7 +404,7 @@ const ProfileScreen: React.FC<Props> = ({ onNavigate }) => {
                           onChangeText={(text) => {
                             setBusinessHours(prev => ({
                               ...prev,
-                              [dayKey]: { ...prev[dayKey], endTime: text }
+                              [day]: { ...prev[day], endTime: text }
                             }));
                           }}
                         />
@@ -1090,7 +1084,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-
 });
 
 export default ProfileScreen;

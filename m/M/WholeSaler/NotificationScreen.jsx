@@ -7,13 +7,8 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import type { AppScreen } from '../App';
 
-type Props = {
-  onNavigate: (screen: AppScreen) => void;
-};
-
-const NotificationScreen: React.FC<Props> = ({ onNavigate }) => {
+const NotificationScreen = ({ onNavigate }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest First');
   const [searchText, setSearchText] = useState('');
